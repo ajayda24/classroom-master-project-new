@@ -1,0 +1,45 @@
+<%- include('../includes/head.ejs') %>
+    <style>
+        body{
+            padding-left: 4.5rem;
+        }
+        #tutorContent{
+          margin: 60px auto;
+        }
+        #details{
+          width: 20rem;
+        }
+        #divNotFile{
+          margin: 0 auto;
+        }
+        @media (min-width: 768px) {
+        #details{
+          width: 25rem;
+        }
+    }
+    
+    </style>
+</head>
+
+<body>
+    
+    <%- include('../includes/navigation.ejs') %>
+    <%- include('./nav.ejs') %>
+    <div id="tutorContent" class="centered">
+      <a href="/tutor/chat"> <i class="fas fa-comment-dots" id="chatBox"></i></a>
+        <div class="card mb-3" id="details">
+          
+            <div class="col-md-8" id="divNotFile">
+              <div class="card-body">
+                <h4 class="card-title text-left mb-2">Event : <%= event.eventHead %></h4>
+                <h5 class="card-title text-left mb-2">Conducting By : <%= event.eventBy %></h5>
+                <h5 class="card-title text-left mb-2">Topic : <%= event.topic %></h5>
+                <div class="card-footer bg-transparent border-dark ">Date : <%= event.date %></div>
+              </div>
+              
+            </div>
+            
+        </div>
+    </div>
+    
+<%- include('../includes/end.ejs') %>
