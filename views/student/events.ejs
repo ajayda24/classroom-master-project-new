@@ -38,83 +38,7 @@
             <center>
                 <h1 class="mb-4" style="font-size: 2rem;">Events</h1>
             </center>
-            <div id="form-assignment" class="mb-4" >
-            <form  action="/tutor/events/add" method="post" enctype="multipart/form-data">
-                
-                <div class="form-group ">
-                 <input type="text" class="form-control" name="inputEvent" placeholder="Events" autocomplete="off"  required>
-               </div>
-                
-                <div class="form-group">
-                  <input class="form-control" rows="4" name="inputEventBy" placeholder="Conducting By" autocomplete="off"  ></input>
-                </div>
-
-                <div class="form-group">
-                    <input class="form-control" rows="4" name="inputTopic" placeholder="Topic" autocomplete="off"  ></input>
-                  </div>
-
-                  <div class="form-group">
-                    <input class="form-control" rows="4" name="inputDate" placeholder="Date" autocomplete="off"  ></input>
-                  </div>
-
-                
-                <center>
-                  <span class="h5">Paid Event &nbsp;&nbsp;: &nbsp;&nbsp;</span>
-                  <input type="checkbox"  data-toggle="toggle" data-on="Yes" data-off="No" data-onstyle="success" data-offstyle="danger" id="toggle-event">
-
-                  <center>
-                    <div class="form-row">
-                      <div class="input-group input-group-lg col-md-4 mx-auto mt-3">
-                        <div class="input-group-prepend">
-                          <span class="input-group-text" style="display: none;" id="rupees" >Rs</span>
-                        </div>
-                        <input class="form-control" rows="4" name="enterPrice" id="enterPrice" placeholder="Amount" autocomplete="off"  style="display: none;" ></input>
-                      </div>
-                    </div>
-
-                  </center>
-                      <!-- <div id="console-event"></div> -->
-                 <!-- <p class="text-danger font-weight-bold"> Only PDF & Images are Supported</p> -->
-                    <div id="file-js-example" class="file has-name is-centered is-info mb-3 mt-4">
-                        <label class="file-label">
-                          <input class="file-input" type="file" name="files"  accept=".pdf, .png, .jpg, .jpeg, .mkv, .mp4, .avi, .mp3, .m4a, .wav" id="fuUpload">
-                          <span class="file-cta">
-                            <span class="file-icon">
-                              <i class="fas fa-upload"></i>
-                            </span>
-                            <span class="file-label">
-                              Choose a file…
-                            </span>
-                          </span>
-                          <span class="file-name">
-                            No file uploaded
-                          </span>
-                          
-                        </label>
-                        
-                      </div>
-                      <div id="dvProgress" style="display: none;" class="progress is-link"></div>
-
-                      
-
-                      <script>
-                        const fileInput = document.querySelector('#file-js-example input[type=file]');
-                        fileInput.onchange = () => {
-                          if (fileInput.files.length > 0) {
-                            const fileName = document.querySelector('#file-js-example .file-name');
-                            fileName.textContent = fileInput.files[0].name;
-                          }
-                        }
-                      </script>
-
-                <input type="hidden" name="paidEvent" id="paidEvent" value="false">
-
-                <a type="submit" href="/tutor/events" class="btn btn-lg btn-danger ">Cancel</a>
-                <button type="submit" class="btn btn-lg btn-success ml-2">Save</button>
-                </center>
-                
-              </form>
-            </div>
+            
 
               <table class="table table-hover table-bordered mt-4 " id="table_id" >
                 <thead class="thead-dark">
@@ -122,7 +46,6 @@
                     <th scope="col">Date</th>
                     <th scope="col">Topic</th>
                     <th scope="col">Amount</th>
-                    <th scope="col">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,18 +67,6 @@
                       <td scope="row"   onclick="window.location.href='events/details/<%= event._id %>'">Free
                       </td>
                     <% } %>
-                    <td style="text-align:center" id="td-<%= event._id %>">
-
-                      <form id="<%= event._id %>" >
-                        <input type="hidden" value="<%= event._id %>" name="eventId">
-                        
-                      </form> 
-                        <!-- <a class="btn btn-warning mr-2" href="assignments/edit/?edit=true"><i class="fas fa-user-edit"></i></a>  -->
-    
-
-                         
-                        <button class="btn btn-danger" onclick="confirmDelete(this)" ><i class="fas fa-trash"></i></button> 
-                    </td>
                   </tr>
                   <% } %>
                 </tbody>
@@ -250,4 +161,8 @@
     })
   });
 </script>
+<script>
+        const height = window.innerHeight;
+        document.getElementById("sidebar").style.height = height+'px';
+    </script>
 <%- include('../includes/end.ejs') %>

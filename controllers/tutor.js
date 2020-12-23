@@ -9,6 +9,12 @@ const bcrypt = require('bcryptjs')
 var unirest = require('unirest')
 var canvas = require('canvas')
 var Clipper = require('image-clipper')
+var Razorpay = require('razorpay')
+
+var instance = new Razorpay({
+  key_id: 'rzp_test_uHg1pC3lqMlNyl',
+  key_secret: 'zq69JL3eH1zppEZd35u3qAkQ',
+})
 
 const Tutor = require('../models/tutor')
 const Student = require('../models/student')
@@ -1140,18 +1146,78 @@ exports.postAddEvents = (req, res, next) => {
   const eventHead = req.body.inputEvent
   const eventBy = req.body.inputEventBy
   const topic = req.body.inputTopic
+  const paidEvent = req.body.paidEvent
+  const eventPrice = req.body.enterPrice
 
   const date = req.body.inputDate
+  const updatedAt = new Date().toLocaleDateString(undefined, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+
+  const file = req.file
+  if (file) {
+    var eventFileUrl = file.path
+    var eventFileType = file.mimetype
+    var eventFileOriginalName = file.originalname
+  }
 
   Tutor.findOne({ _id: req.session.tutor._id })
     .then((tutor) => {
       var addEvents = {}
-      addEvents = {
-        eventHead: eventHead,
-        eventBy: eventBy,
-        topic: topic,
-        date: date,
-        tutorId: tutorId,
+      if (paidEvent){
+        if (file) {
+          addEvents = {
+            eventHead: eventHead,
+            eventBy: eventBy,
+            topic: topic,
+            date: date,
+            tutorId: tutorId,
+            file: eventFileUrl,
+            filetype: eventFileType,
+            filename: eventFileOriginalName,
+            paidEvent: paidEvent,
+            eventPrice: eventPrice,
+            eventAccess: false,
+            updatedAt: updatedAt,
+          }
+        } else {
+          addEvents = {
+            eventHead: eventHead,
+            eventBy: eventBy,
+            topic: topic,
+            date: date,
+            tutorId: tutorId,
+            paidEvent: paidEvent,
+            eventPrice: eventPrice,
+            eventAccess: false,
+            updatedAt: updatedAt,
+          }
+        }
+      } else {
+        if (file) {
+          addEvents = {
+            eventHead: eventHead,
+            eventBy: eventBy,
+            topic: topic,
+            date: date,
+            tutorId: tutorId,
+            file: eventFileUrl,
+            filetype: eventFileType,
+            filename: eventFileOriginalName,
+            updatedAt: updatedAt,
+          }
+        } else {
+          addEvents = {
+            eventHead: eventHead,
+            eventBy: eventBy,
+            topic: topic,
+            date: date,
+            tutorId: tutorId,
+            updatedAt: updatedAt,
+          }
+        }
       }
       tutor.events.push(addEvents)
       return tutor.save()
@@ -1181,22 +1247,101 @@ exports.getEventsDetails = (req, res, next) => {
       
     const eventId = req.params.eventId
     const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
-    res.render('tutor/events-details', {
-      pageTitle: 'Dashboard',
-      path: '/tutor',
-      sPath: '/tutor/events',
-      name: tutor.name,
-      editing: false,
-      isAuthenticated: req.session.isTutorLoggedIn,
-      event: eventSingle,
-      notifyAssignments: studentAssignments,
-    })
+
+    if (eventSingle){
+      if (eventSingle.tutorId == req.session.tutor._id){
+        if (eventSingle.filetype == 'application/pdf') {
+          const eventRead = eventSingle.file
+          const file = fs.createReadStream(eventRead)
+          res.setHeader('Content-Type', 'application/pdf')
+          file.pipe(res)
+        } else if (
+          eventSingle.filetype == 'video/mp4' ||
+          eventSingle.filetype == 'video/mkv' ||
+          eventSingle.filetype == 'video/avi'
+        ) {
+          
+          res.render('tutor/events-details', {
+            pageTitle: 'Dashboard',
+            path: '/tutor',
+            sPath: '/tutor/events',
+            name: tutor.name,
+            editing: false,
+            isAuthenticated: req.session.isTutorLoggedIn,
+            event: eventSingle,
+            video: true,
+            notifyAssignments: studentAssignments,
+            eventAccess: true,
+          })
+          
+        } else {
+          res.render('tutor/events-details', {
+            pageTitle: 'Dashboard',
+            path: '/tutor',
+            sPath: '/tutor/events',
+            name: tutor.name,
+            editing: false,
+            isAuthenticated: req.session.isTutorLoggedIn,
+            event: eventSingle,
+            video: false,
+            notifyAssignments: studentAssignments,
+            eventAccess: true,
+          })
+        }
+      } else {
+        if (eventSingle.filetype == 'application/pdf') {
+          const eventRead = eventSingle.file
+          const file = fs.createReadStream(eventRead)
+          res.setHeader('Content-Type', 'application/pdf')
+          file.pipe(res)
+        } else if (
+          eventSingle.filetype == 'video/mp4' ||
+          eventSingle.filetype == 'video/mkv' ||
+          eventSingle.filetype == 'video/avi'
+        ) {
+          res.render('tutor/events-details', {
+            pageTitle: 'Dashboard',
+            path: '/tutor',
+            sPath: '/tutor/events',
+            name: tutor.name,
+            editing: false,
+            isAuthenticated: req.session.isTutorLoggedIn,
+            event: eventSingle,
+            video: true,
+            notifyAssignments: studentAssignments,
+            eventAccess: eventSingle.eventAccess,
+          })
+        } else {
+          res.render('tutor/events-details', {
+            pageTitle: 'Dashboard',
+            path: '/tutor',
+            sPath: '/tutor/events',
+            name: tutor.name,
+            editing: false,
+            isAuthenticated: req.session.isTutorLoggedIn,
+            event: eventSingle,
+            video: false,
+            notifyAssignments: studentAssignments,
+            eventAccess: eventSingle.eventAccess,
+          })
+        }
+      }
+    } 
+  
   })
 })
 }
 
 exports.postDeleteEvents = (req, res, next) => {
   const eventId = req.body.eventId
+
+  Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+    const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
+    if (eventSingle.file) {
+      deletFiles.deleteFile(eventSingle.file)
+    }
+  })
+
   Tutor.findByIdAndUpdate(req.session.tutor._id, {
     $pull: { events: { _id: eventId } },
   })
@@ -1206,6 +1351,94 @@ exports.postDeleteEvents = (req, res, next) => {
     .catch((err) => {
       console.log(err)
     })
+}
+
+exports.postEventPayment = (req, res, next) => {
+  var eventId = req.body.eventId;
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice+'00')
+    var options = {
+      amount: eventPrice, // amount in the smallest currency unit
+      currency: 'INR',
+      receipt: eventIdString,
+    }
+    instance.orders.create(options, function (err, order) {
+      if(err){
+        console.log(err);
+      } else {
+        console.log(order)
+        Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+          Student.find({ tutorId: tutor._id }, function (err, students) {
+            var studentAssignments = [];
+            for (let student of students) {
+              studentAssignments.push(student.assignments);
+            }
+            studentAssignments = studentAssignments
+            .flat()
+            .slice(Math.max(studentAssignments.length - 5, 0))
+            .sort(function (a, b) {
+              return new Date(a.date) - new Date(b.date)
+            })
+            .reverse()
+
+          const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
+          res.render('tutor/events-payment', {
+            pageTitle: 'Dashboard',
+            path: '/tutor',
+            sPath: '/tutor/events',
+            name: tutor.name,
+            editing: false,
+            isAuthenticated: req.session.isTutorLoggedIn,
+            event: eventSingle,
+            notifyAssignments: studentAssignments,
+            eventOrder: order
+          })
+        })
+      })
+      }
+      
+    }) 
+}
+
+exports.postEventPaymentVerify = (req, res, next) => {
+  var eventId = req.body.eventId
+  var razorpay_order_id = req.body.razorpay_order_id
+  var razorpay_payment_id = req.body.razorpay_payment_id
+  var razorpay_signature = req.body.razorpay_signature
+  
+      Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+        Student.find({ tutorId: tutor._id }, function (err, students) {
+          var studentAssignments = []
+          for (let student of students) {
+            studentAssignments.push(student.assignments)
+          }
+          studentAssignments = studentAssignments
+            .flat()
+            .slice(Math.max(studentAssignments.length - 5, 0))
+            .sort(function (a, b) {
+              return new Date(a.date) - new Date(b.date)
+            })
+            .reverse()
+
+          const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
+          const crypto = require('crypto')
+          var secret = 'zq69JL3eH1zppEZd35u3qAkQ'
+          const hash = crypto
+            .createHmac('sha256', secret)
+            .update(razorpay_order_id + '|' + razorpay_payment_id)
+            .digest('hex')
+          
+          if (hash == razorpay_signature){
+            console.log('Payment Success');
+            eventSingle.eventAccess = true;
+            tutor.save();
+            res.redirect('/tutor/events/details/' + eventId)
+          } else {
+            console.log('Payment Failed')
+            res.redirect('/tutor/events')
+          }
+        })
+      })
 }
 
 exports.getPhotos = (req, res, next) => {
@@ -1334,8 +1567,10 @@ exports.postDeleteImages = (req, res, next) => {
   const imageId = req.body.imageId
   Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
     const image = tutor.images.find(({ _id }) => _id == imageId)
-    if (image.imageUrl) {
-      deletFiles.deleteFile(image.imageUrl)
+    if(image){
+      if (image.imageUrl) {
+        deletFiles.deleteFile(image.imageUrl)
+      }
     }
   })
   Tutor.findByIdAndUpdate(req.session.tutor._id, {

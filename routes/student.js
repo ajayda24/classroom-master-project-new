@@ -68,21 +68,25 @@ router.post(
 router.get('/announcements',studentAuth, studentController.getAnnouncements);
 
 // /student/announcements/details => GET
-router.get(
-  '/announcements/details/:announcementId',
-  studentAuth,
-  studentController.getAnnouncementsDetails
-)
+router.get('/announcements/details/:announcementId',studentAuth,studentController.getAnnouncementsDetails)
+
+// /student/events => GET
+router.get('/events', studentAuth, studentController.getEvents)
+
+// /student/events/details => GET
+router.get('/events/details/:eventId',studentAuth,studentController.getEventDetails)
+
+// /tutor/events/details/pay => POST
+router.post('/events/details/pay',studentAuth,studentController.postEventPayment)
+
+// /tutor/events/details/pay/verify => POST
+router.post('/events/details/pay/verify',studentAuth,studentController.postEventPaymentVerify)
 
 // /student/notes => GET
 router.get('/notes',studentAuth, studentController.getNotes);
 
 // /student/notes/details => GET
-router.get(
-  '/notes/details/:notesId',
-  studentAuth,
-  studentController.getNotesDetails
-)
+router.get('/notes/details/:notesId',studentAuth,studentController.getNotesDetails);
 
 // /student/profile => GET
 router.get('/profile',studentAuth, studentController.getProfile);

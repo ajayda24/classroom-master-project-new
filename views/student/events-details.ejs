@@ -53,7 +53,7 @@
               
               <!-- </div> -->
             
-        <% } else { %>
+        <% } else if(image){ %>
           <div class="row no-gutters">
             
               <div class="col-md-4">
@@ -98,7 +98,7 @@
             <h5 class="card-title text-left mb-2">Topic : <%= event.topic %></h5>
             <div class="card-footer bg-transparent border-dark ">Date : <%= event.date %></div>
           </div>
-          <form action="/tutor/events/details/pay" method="post" id="eventPaymentForm">
+          <form action="/student/events/details/pay" method="post" id="eventPaymentForm">
             <input type="hidden" name="eventId" id="eventId" value="<%= event._id %>">
             <input type="hidden" name="eventPrice" id="eventPrice">
             <button type="button" class="btn btn-primary mb-3 mt-3" onclick="postPayment()">Pay Rs. <%= event.eventPrice %></button>
@@ -151,7 +151,7 @@
             
               </div>
             <% } %>
-      <% } else { %>
+            <% } else { %>
           
               <div class="col-md-8" id="divNotFile">
                 <div class="card-body">
@@ -163,7 +163,7 @@
               
               </div>
 
-      <% } %>
+            <% } %>
       <% } %>  
       <% } %>       
     </div>
@@ -175,5 +175,9 @@
         document.getElementById('eventPrice').value = '<%= event.eventPrice %>'
         form.submit();
       }
+    </script>
+    <script>
+        const height = window.innerHeight;
+        document.getElementById("sidebar").style.height = height+'px';
     </script>
 <%- include('../includes/end.ejs') %>

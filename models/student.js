@@ -58,6 +58,22 @@ const studentsSchema = new Schema({
       mark: String,
     },
   ],
+  events: [
+    {
+      eventHead: String,
+      eventBy: String,
+      topic: String,
+      date: String,
+      file: String,
+      filetype: String,
+      filename: String,
+      paidEvent: String,
+      eventPrice: String,
+      eventAccess: Boolean,
+      updatedAt: String,
+      modifiedAt: String
+    },
+  ],
   chat: [
     {
       date: String,

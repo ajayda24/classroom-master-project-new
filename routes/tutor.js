@@ -120,6 +120,12 @@ router.post('/events/add',tutorAuth, tutorController.postAddEvents);
 // /tutor/events/details => GET
 router.get('/events/details/:eventId',tutorAuth, tutorController.getEventsDetails);
 
+// /tutor/events/details/pay => POST
+router.post('/events/details/pay', tutorAuth, tutorController.postEventPayment)
+
+// /tutor/events/details/pay/verify => POST
+router.post('/events/details/pay/verify',tutorAuth,tutorController.postEventPaymentVerify)
+
 // /tutor/events/delete => POST
 router.post('/events/delete',tutorAuth, tutorController.postDeleteEvents);
 

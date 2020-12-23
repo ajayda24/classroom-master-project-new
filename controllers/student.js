@@ -6,6 +6,12 @@ const io = require('../socket')
 
 const bcrypt = require('bcryptjs')
 var unirest = require('unirest')
+var Razorpay = require('razorpay')
+
+var instance = new Razorpay({
+  key_id: 'rzp_test_uHg1pC3lqMlNyl',
+  key_secret: 'zq69JL3eH1zppEZd35u3qAkQ',
+})
 
 const Student = require('../models/student')
 const Tutor = require('../models/tutor')
@@ -28,11 +34,10 @@ exports.getIndex = (req, res, next) => {
       )
 
       const lastAnnSort = lastAnn.reverse()
-      const lastevents = tutor.events.slice(
+      const lastevents = student.events.slice(
         Math.max(tutor.events.length - 5, 0)
       )
-      const lastEventsSort = lastevents.reverse();
-
+      const lastEventsSort = lastevents.reverse()
 
       var tutorAssignmentsNotes = tutor.assignments
         .concat(tutor.notes)
@@ -75,7 +80,7 @@ exports.getTask = (req, res, next) => {
       const currentDate = new Date().toLocaleDateString(undefined, {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric'
+        year: 'numeric',
       })
       const assignment = tutor.assignments.filter(
         ({ date }) =>
@@ -104,7 +109,6 @@ exports.getTask = (req, res, next) => {
           }) == currentDate
       )
 
-
       var tutorAssignmentsNotes = tutor.assignments
         .concat(tutor.notes)
         .flat()
@@ -124,7 +128,6 @@ exports.getTask = (req, res, next) => {
         notes: note,
         oldAssignments: oldAssignments,
         tutorAssignmentsNotes: tutorAssignmentsNotes,
-        
       })
     })
   })
@@ -133,30 +136,31 @@ exports.getTask = (req, res, next) => {
 exports.getAttendance = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-    const today = new Date().toLocaleDateString()
-    const todayAttendance = student.attendance.find(({ date }) => date == today)
-    // const todayAttendance = student.attendance.filter(({ date }) => date);
+      const today = new Date().toLocaleDateString()
+      const todayAttendance = student.attendance.find(
+        ({ date }) => date == today
+      )
+      // const todayAttendance = student.attendance.filter(({ date }) => date);
 
-    const attendanceNewEntry = student.attendance.reverse()
+      const attendanceNewEntry = student.attendance.reverse()
 
-    var date = new Date(today)
-    var dd = String(date.getDate()).padStart(2, '0')
-    var mm = String(date.getMonth() + 1).padStart(2, '0') //January is 0!
-    var yyyy = date.getFullYear()
+      var date = new Date(today)
+      var dd = String(date.getDate()).padStart(2, '0')
+      var mm = String(date.getMonth() + 1).padStart(2, '0') //January is 0!
+      var yyyy = date.getFullYear()
 
-    monthYear = mm + '  /  ' + yyyy
+      monthYear = mm + '  /  ' + yyyy
 
-    // const diffInDays = Math.abs(today - student.attendance.date) / (1000 * 60 * 60 * 24)
-    const lastAttendance = attendanceNewEntry[0]
-    if (lastAttendance){
+      // const diffInDays = Math.abs(today - student.attendance.date) / (1000 * 60 * 60 * 24)
+      const lastAttendance = attendanceNewEntry[0]
+      if (lastAttendance) {
+        const d1 = new Date(lastAttendance.date)
+        const d2 = new Date(today)
+        const diffTime = Math.abs(d2 - d1)
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-      const d1 = new Date(lastAttendance.date)
-      const d2 = new Date(today)
-      const diffTime = Math.abs(d2 - d1)
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-      
-      var lastUpdated = lastAttendance.lastUpdated;
-      if (!todayAttendance != false && diffDays > 1 && lastUpdated != today) {
+        var lastUpdated = lastAttendance.lastUpdated
+        if (!todayAttendance != false && diffDays > 1 && lastUpdated != today) {
           var z = new Date()
           for (var i = 0; i < diffDays; i++) {
             z.setDate(z.getDate() - i)
@@ -169,70 +173,68 @@ exports.getAttendance = (req, res, next) => {
             student.attendance.push(attendance)
           }
           student.save()
+        }
       }
-    }
 
-    let present = []
-    let absent = []
-    for (let i = 0; i < student.attendance.length; i++) {
-      if (student.attendance[i].present == true) {
-        present.push(student.attendance[i])
+      let present = []
+      let absent = []
+      for (let i = 0; i < student.attendance.length; i++) {
+        if (student.attendance[i].present == true) {
+          present.push(student.attendance[i])
+        }
       }
-    }
-    for (let i = 0; i < student.attendance.length; i++) {
-      if (student.attendance[i].present == false) {
-        absent.push(student.attendance[i])
+      for (let i = 0; i < student.attendance.length; i++) {
+        if (student.attendance[i].present == false) {
+          absent.push(student.attendance[i])
+        }
       }
-    }
 
-    var tutorAssignmentsNotes = tutor.assignments
-      .concat(tutor.notes)
-      .flat()
-      .sort(function (a, b) {
-        return new Date(a.date) - new Date(b.date)
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+      res.render('student/attendance', {
+        pageTitle: 'Dashboard',
+        path: '/student',
+        sPath: '/student/attendance',
+        name: student.name,
+        editing: false,
+        isAuthenticated: req.session.isStudentLoggedIn,
+        present: present.length,
+        absent: absent.length,
+        monthYear: monthYear,
+        tutorAssignmentsNotes: tutorAssignmentsNotes,
       })
-      .reverse()
-
-    res.render('student/attendance', {
-      pageTitle: 'Dashboard',
-      path: '/student',
-      sPath: '/student/attendance',
-      name: student.name,
-      editing: false,
-      isAuthenticated: req.session.isStudentLoggedIn,
-      present: present.length,
-      absent: absent.length,
-      monthYear: monthYear,
-      tutorAssignmentsNotes: tutorAssignmentsNotes,
-      
     })
   })
-})
 }
 
 exports.getAssignments = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-    var tutorAssignmentsNotes = tutor.assignments
-      .concat(tutor.notes)
-      .flat()
-      .sort(function (a, b) {
-        return new Date(a.date) - new Date(b.date)
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+      res.render('student/assignments', {
+        pageTitle: 'Dashboard',
+        path: '/student',
+        sPath: '/student/assignments',
+        name: student.name,
+        editing: false,
+        isAuthenticated: req.session.isStudentLoggedIn,
+        assignments: student.assignments,
+        tutorAssignmentsNotes: tutorAssignmentsNotes,
       })
-      .reverse()
-    res.render('student/assignments', {
-      pageTitle: 'Dashboard',
-      path: '/student',
-      sPath: '/student/assignments',
-      name: student.name,
-      editing: false,
-      isAuthenticated: req.session.isStudentLoggedIn,
-      assignments: student.assignments,
-      tutorAssignmentsNotes: tutorAssignmentsNotes,
-      
     })
   })
-})
 }
 
 exports.postAddAssignments = (req, res, next) => {
@@ -320,7 +322,6 @@ exports.getAssignmentsDetails = (req, res, next) => {
           isAuthenticated: req.session.isStudentLoggedIn,
           assignment: assignment,
           tutorAssignmentsNotes: tutorAssignmentsNotes,
-          
         })
       }
     })
@@ -331,36 +332,35 @@ exports.getStudentAssignmentsDetails = (req, res, next) => {
   const assignmentId = req.params.assignmentId
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-    const assignment = student.assignments.find(
-      ({ _id }) => _id == assignmentId
-    )
-    var tutorAssignmentsNotes = tutor.assignments
-      .concat(tutor.notes)
-      .flat()
-      .sort(function (a, b) {
-        return new Date(a.date) - new Date(b.date)
-      })
-      .reverse()
-    if (assignment.filetype == 'application/pdf') {
-      const assignmentRead = assignment.file
-      const file = fs.createReadStream(assignmentRead)
-      res.setHeader('Content-Type', 'application/pdf')
-      file.pipe(res)
-    } else {
-      res.render('student/assignments-details', {
-        pageTitle: 'Dashboard',
-        path: '/student',
-        sPath: '/student/assignments',
-        name: student.name,
-        editing: false,
-        isAuthenticated: req.session.isStudentLoggedIn,
-        assignment: assignment,
-        tutorAssignmentsNotes: tutorAssignmentsNotes,
-        
-      })
-    }
+      const assignment = student.assignments.find(
+        ({ _id }) => _id == assignmentId
+      )
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+      if (assignment.filetype == 'application/pdf') {
+        const assignmentRead = assignment.file
+        const file = fs.createReadStream(assignmentRead)
+        res.setHeader('Content-Type', 'application/pdf')
+        file.pipe(res)
+      } else {
+        res.render('student/assignments-details', {
+          pageTitle: 'Dashboard',
+          path: '/student',
+          sPath: '/student/assignments',
+          name: student.name,
+          editing: false,
+          isAuthenticated: req.session.isStudentLoggedIn,
+          assignment: assignment,
+          tutorAssignmentsNotes: tutorAssignmentsNotes,
+        })
+      }
+    })
   })
-})
 }
 
 exports.postDeleteAssignments = (req, res, next) => {
@@ -392,13 +392,13 @@ exports.getAnnouncements = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
       const announcement = tutor.announcements.reverse()
-var tutorAssignmentsNotes = tutor.assignments
-  .concat(tutor.notes)
-  .flat()
-  .sort(function (a, b) {
-    return new Date(a.date) - new Date(b.date)
-  })
-  .reverse()
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
       res.render('student/announcements', {
         pageTitle: 'Dashboard',
         path: '/student',
@@ -408,7 +408,6 @@ var tutorAssignmentsNotes = tutor.assignments
         isAuthenticated: req.session.isStudentLoggedIn,
         announcements: announcement,
         tutorAssignmentsNotes: tutorAssignmentsNotes,
-        
       })
     })
   })
@@ -437,9 +436,297 @@ exports.getAnnouncementsDetails = (req, res, next) => {
         isAuthenticated: req.session.isStudentLoggedIn,
         announcement: announcement,
         tutorAssignmentsNotes: tutorAssignmentsNotes,
-        
       })
       // }
+    })
+  })
+}
+
+exports.getEvents = (req, res, next) => {
+  Student.findOne({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      const tutorEvents = tutor.events.sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+      const today = new Date().toLocaleDateString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+
+      // var tutorUpdatedAt = tutorEvents.filter(({ updatedAt }) => updatedAt == today)
+      
+      var studentAllEvent = student.events.reverse();
+      var studentLastEvent = studentAllEvent[0];
+      var events = [];
+      if (studentLastEvent){
+        if (
+          studentLastEvent.modifiedAt != today ||
+          studentLastEvent.modifiedAt != null ||
+          studentLastEvent.modifiedAt != undefined ||
+          studentLastEvent.modifiedAt != ''
+        ) {
+          for (var i = 0; i < tutorEvents.length; i++) {
+            if (tutorEvents[i].paidEvent == true){
+              var studentEvents = {
+                eventHead: tutorEvents[i].eventHead,
+                eventBy: tutorEvents[i].eventBy,
+                topic: tutorEvents[i].topic,
+                date: tutorEvents[i].date,
+                file: tutorEvents[i].file,
+                filetype: tutorEvents[i].filetype,
+                filename: tutorEvents[i].filename,
+                paidEvent: tutorEvents[i].paidEvent,
+                eventPrice: tutorEvents[i].eventPrice,
+                eventAccess: false,
+                updatedAt: tutorEvents[i].updatedAt,
+                modifiedAt: today,
+              }
+            } else {
+              var studentEvents = {
+                eventHead: tutorEvents[i].eventHead,
+                eventBy: tutorEvents[i].eventBy,
+                topic: tutorEvents[i].topic,
+                date: tutorEvents[i].date,
+                file: tutorEvents[i].file,
+                filetype: tutorEvents[i].filetype,
+                filename: tutorEvents[i].filename,
+                paidEvent: tutorEvents[i].paidEvent,
+                eventPrice: tutorEvents[i].eventPrice,
+                updatedAt: tutorEvents[i].updatedAt,
+                modifiedAt: today,
+              }
+            }
+            events.push(studentEvents)
+          }
+          student.save()
+          // var studentEvents = []
+          // var events = studentEvents.concat(tutorEvents)
+
+        } 
+      } else {
+        for (var i = 0; i < tutorEvents.length; i++) {
+          if (tutorEvents[i].paidEvent == true) {
+            var studentEvents = {
+              eventHead: tutorEvents[i].eventHead,
+              eventBy: tutorEvents[i].eventBy,
+              topic: tutorEvents[i].topic,
+              date: tutorEvents[i].date,
+              file: tutorEvents[i].file,
+              filetype: tutorEvents[i].filetype,
+              filename: tutorEvents[i].filename,
+              paidEvent: tutorEvents[i].paidEvent,
+              eventPrice: tutorEvents[i].eventPrice,
+              eventAccess: false,
+              updatedAt: tutorEvents[i].updatedAt,
+              modifiedAt: today,
+            }
+          } else {
+            var studentEvents = {
+              eventHead: tutorEvents[i].eventHead,
+              eventBy: tutorEvents[i].eventBy,
+              topic: tutorEvents[i].topic,
+              date: tutorEvents[i].date,
+              file: tutorEvents[i].file,
+              filetype: tutorEvents[i].filetype,
+              filename: tutorEvents[i].filename,
+              paidEvent: tutorEvents[i].paidEvent,
+              eventPrice: tutorEvents[i].eventPrice,
+              updatedAt: tutorEvents[i].updatedAt,
+              modifiedAt: today,
+            }
+          }
+          
+          student.events.push(studentEvents)
+          
+        }
+        
+        student.save()
+      }
+
+      
+
+      res.render('student/events', {
+        pageTitle: 'Dashboard',
+        path: '/student',
+        sPath: '/student/events',
+        name: student.name,
+        editing: false,
+        isAuthenticated: req.session.isStudentLoggedIn,
+        events: student.events,
+        tutorAssignmentsNotes: tutorAssignmentsNotes,
+      })
+    })
+  })
+}
+
+exports.getEventDetails = (req, res, next) => {
+  Student.findOne({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      const eventId = req.params.eventId
+      const eventSingle = student.events.find(({ _id }) => _id == eventId)
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+      if (eventSingle) {
+        if (eventSingle.filetype == 'application/pdf') {
+          const eventRead = eventSingle.file
+          const file = fs.createReadStream(eventRead)
+          res.setHeader('Content-Type', 'application/pdf')
+          file.pipe(res)
+        } else if (
+          eventSingle.filetype == 'video/mp4' ||
+          eventSingle.filetype == 'video/mkv' ||
+          eventSingle.filetype == 'video/avi'
+        ) {
+          res.render('student/events-details', {
+            pageTitle: 'Dashboard',
+            path: '/student',
+            sPath: '/student/events',
+            name: student.name,
+            editing: false,
+            isAuthenticated: req.session.isStudentLoggedIn,
+            event: eventSingle,
+            tutorAssignmentsNotes: tutorAssignmentsNotes,
+            video: true,
+            eventAccess: eventSingle.eventAccess,
+          })
+        } else if (
+          eventSingle.filetype == 'image/png' ||
+          eventSingle.filetype == 'image/jpg' ||
+          eventSingle.filetype == 'image/jpeg'
+        ) {
+          res.render('student/events-details', {
+            pageTitle: 'Dashboard',
+            path: '/student',
+            sPath: '/student/events',
+            name: student.name,
+            editing: false,
+            isAuthenticated: req.session.isStudentLoggedIn,
+            event: eventSingle,
+            tutorAssignmentsNotes: tutorAssignmentsNotes,
+            video: false,
+            image: true,
+            eventAccess: eventSingle.eventAccess,
+          })
+        } else {
+          res.render('student/events-details', {
+            pageTitle: 'Dashboard',
+            path: '/student',
+            sPath: '/student/events',
+            name: student.name,
+            editing: false,
+            isAuthenticated: req.session.isStudentLoggedIn,
+            event: eventSingle,
+            tutorAssignmentsNotes: tutorAssignmentsNotes,
+            video: false,
+            image: false,
+            eventAccess: eventSingle.eventAccess,
+          })
+        }
+      }
+    })
+  })
+}
+
+exports.postEventPayment = (req, res, next) => {
+  var eventId = req.body.eventId
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice + '00')
+  var options = {
+    amount: eventPrice, // amount in the smallest currency unit
+    currency: 'INR',
+    receipt: eventIdString,
+  }
+  instance.orders.create(options, function (err, order) {
+    if (err) {
+      console.log(err)
+    } else {
+      console.log(order)
+      Student.findById({ _id: req.session.student._id }, function (err, student) {
+        Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+          var tutorAssignmentsNotes = tutor.assignments
+            .concat(tutor.notes)
+            .flat()
+            .sort(function (a, b) {
+              return new Date(a.date) - new Date(b.date)
+            })
+            .reverse()
+
+          const eventSingle = student.events.find(({ _id }) => _id == eventId)
+          res.render('student/events-payment', {
+            pageTitle: 'Dashboard',
+            path: '/student',
+            sPath: '/student/events',
+            name: student.name,
+            editing: false,
+            isAuthenticated: req.session.isStudentLoggedIn,
+            tutorAssignmentsNotes: tutorAssignmentsNotes,
+            event: eventSingle,
+            eventOrder: order,
+          })
+        })
+      })
+    }
+  })
+}
+
+exports.postEventPaymentVerify = (req, res, next) => {
+  var eventId = req.body.eventId
+  var razorpay_order_id = req.body.razorpay_order_id
+  var razorpay_payment_id = req.body.razorpay_payment_id
+  var razorpay_signature = req.body.razorpay_signature
+
+  Student.findById({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+      const eventSingle = student.events.find(({ _id }) => _id == eventId)
+      const crypto = require('crypto')
+      var secret = 'zq69JL3eH1zppEZd35u3qAkQ'
+      const hash = crypto
+        .createHmac('sha256', secret)
+        .update(razorpay_order_id + '|' + razorpay_payment_id)
+        .digest('hex')
+
+      if (hash == razorpay_signature) {
+        console.log('Payment Success')
+        eventSingle.eventAccess = true
+        return student.save()
+        .then( () => {
+          res.redirect('/student/events/details/' + eventId)
+        })
+        .catch( err => {
+          console.log(err);
+        })
+      } else {
+        console.log('Payment Failed')
+        res.redirect('/tutor/events')
+      }
     })
   })
 }
@@ -463,7 +750,6 @@ exports.getNotes = (req, res, next) => {
         isAuthenticated: req.session.isStudentLoggedIn,
         notes: tutor.notes,
         tutorAssignmentsNotes: tutorAssignmentsNotes,
-        
       })
     })
   })
@@ -502,7 +788,6 @@ exports.getNotesDetails = (req, res, next) => {
           note: note,
           video: true,
           tutorAssignmentsNotes: tutorAssignmentsNotes,
-          
         })
       } else {
         res.render('student/notes-details', {
@@ -515,7 +800,6 @@ exports.getNotesDetails = (req, res, next) => {
           note: note,
           video: false,
           tutorAssignmentsNotes: tutorAssignmentsNotes,
-          
         })
       }
       const today = new Date().toLocaleDateString()
@@ -537,64 +821,63 @@ exports.getNotesDetails = (req, res, next) => {
 exports.getProfile = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-    var tutorAssignmentsNotes = tutor.assignments
-      .concat(tutor.notes)
-      .flat()
-      .sort(function (a, b) {
-        return new Date(a.date) - new Date(b.date)
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+      res.render('student/profile', {
+        pageTitle: 'Dashboard',
+        path: '/student',
+        sPath: '/student/profile',
+        name: student.name,
+        editing: false,
+        isAuthenticated: req.session.isStudentLoggedIn,
+        photo: student.photo,
+        name: student.name,
+        sClass: student.sClass,
+        sDivision: student.sDivision,
+        email: student.email,
+        address: student.address,
+        mobile: student.mobile,
+        tutorAssignmentsNotes: tutorAssignmentsNotes,
       })
-      .reverse()
-    res.render('student/profile', {
-      pageTitle: 'Dashboard',
-      path: '/student',
-      sPath: '/student/profile',
-      name: student.name,
-      editing: false,
-      isAuthenticated: req.session.isStudentLoggedIn,
-      photo: student.photo,
-      name: student.name,
-      sClass: student.sClass,
-      sDivision: student.sDivision,
-      email: student.email,
-      address: student.address,
-      mobile: student.mobile,
-      tutorAssignmentsNotes: tutorAssignmentsNotes,
-      
     })
   })
-})
 }
 
 exports.getChat = (req, res, next) => {
-        Student.findById({ _id: req.session.student._id }, function (err, student) {
-          Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-            var tutorAssignmentsNotes = tutor.assignments
-              .concat(tutor.notes)
-              .flat()
-              .sort(function (a, b) {
-                return new Date(a.date) - new Date(b.date)
-              })
-              .reverse()
+  Student.findById({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
 
-            var tutorChat = tutor.chat.filter(({ sId }) => sId == student._id)
-            var tutorStudentChat = tutorChat.concat(student.chat)
-            tutorStudentChat.sort(function (a, b) {
-              return new Date(a.date) - new Date(b.date)
-            })
-
-            res.render('student/chat', {
-              pageTitle: 'Dashboard',
-              path: '/student',
-              sPath: '/student/chat',
-              name: student.name,
-              editing: false,
-              isAuthenticated: req.session.isStudentLoggedIn,
-              tutorAssignmentsNotes: tutorAssignmentsNotes,
-              chats: tutorStudentChat,
-              student: student
-            })
-          })
+      var tutorChat = tutor.chat.filter(({ sId }) => sId == student._id)
+      var tutorStudentChat = tutorChat.concat(student.chat)
+      tutorStudentChat.sort(function (a, b) {
+        return new Date(a.date) - new Date(b.date)
       })
+
+      res.render('student/chat', {
+        pageTitle: 'Dashboard',
+        path: '/student',
+        sPath: '/student/chat',
+        name: student.name,
+        editing: false,
+        isAuthenticated: req.session.isStudentLoggedIn,
+        tutorAssignmentsNotes: tutorAssignmentsNotes,
+        chats: tutorStudentChat,
+        student: student,
+      })
+    })
+  })
 }
 
 exports.postChatAdd = (req, res, next) => {
@@ -728,7 +1011,7 @@ exports.postSendOtp = (request, response, next) => {
   Student.findOne({ mobile: mobile })
     .then((student) => {
       if (!student) {
-        console.log("No Student with this phone number");
+        console.log('No Student with this phone number')
         return response.redirect('/student/login')
       }
       var req = unirest('POST', 'https://d7networks.com/api/verifier/send')

@@ -63,6 +63,9 @@ const tutorSchema = new Schema({
       message: String,
       description: String,
       date: String,
+      file: String,
+      filetype: String,
+      filename: String,
     },
   ],
   events: [
@@ -71,6 +74,13 @@ const tutorSchema = new Schema({
       eventBy: String,
       topic: String,
       date: String,
+      file: String,
+      filetype: String,
+      filename: String,
+      paidEvent: String,
+      eventPrice: String,
+      eventAccess: Boolean,
+      updatedAt: String,
     },
   ],
   images: [
