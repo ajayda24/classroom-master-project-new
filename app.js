@@ -7,6 +7,7 @@ const mongoose = require('mongoose')
 const session = require('express-session')
 const MongoDBStore = require('connect-mongodb-session')(session)
 
+
 const errorController = require('./controllers/error')
 const indexController = require('./controllers/index')
 const Tutor = require('./models/tutor')
@@ -21,7 +22,7 @@ const store = new MongoDBStore({
   collection: 'sessions',
 })
 
-require('dotenv').config();
+require('dotenv').config()
 
 app.set('view engine', 'ejs')
 app.set('views', 'views')
@@ -37,7 +38,6 @@ app.use(
     store: store,
   })
 )
-
 
 // const fileStorage = multer.diskStorage({
 //   destination: (req, file, cb) => {
@@ -57,12 +57,9 @@ app.use(
 app.use(bodyParser.urlencoded({ extended: false }))
 // app.use(multer({ storage: fileStorage }).single('files'))
 
-
-
 app.use(express.static(path.join(__dirname, 'public')))
 app.use('/tutorFiles', express.static(path.join(__dirname, 'tutorFiles')))
 app.use('/studentFiles', express.static(path.join(__dirname, 'studentFiles')))
-
 
 app.use((req, res, next) => {
   if (!req.session.tutor) {
@@ -71,7 +68,7 @@ app.use((req, res, next) => {
 
   Tutor.findById(req.session.tutor._id)
     .then((tutor) => {
-      req.tutor = tutor;
+      req.tutor = tutor
       next()
     })
     .catch((err) => console.log(err))
@@ -96,9 +93,9 @@ app.use('/student', studentRoutes)
 app.get('/', indexController.getIndex)
 app.use(errorController.get404)
 
-let port = process.env.PORT;
-if (port == null || port == "") {
-  port = 3000;
+let port = process.env.PORT
+if (port == null || port == '') {
+  port = 3000
 }
 
 mongoose
@@ -108,13 +105,11 @@ mongoose
     useFindAndModify: false,
   })
   .then((result) => {
-    const server = app.listen(port,function(){
-      console.log('Server started at port 3000');
+    const server = app.listen(port)
+    const io = require('./socket').init(server)
+    io.on('connection', (socket) => {
+      console.log('Client Connected');
     })
-    const io = require('./socket').init(server);
-    io.on('connection', socket =>{
-      // console.log('Client Connected');
-    });
   })
   .catch((err) => {
     console.log(err)

@@ -6,7 +6,8 @@
         <ul class="main-header__item-list">
             <% if (isAuthenticated) { %>
                 <script>
-                    var openSocket = io('http://localhost:3000');
+                    // var openSocket = io('http://localhost:3000');
+                    var openSocket = io('https://master-classroom-management.herokuapp.com');
                 </script>
                 <li class="main-header__item">
                     <% if(path == '/tutor') { %>
@@ -26,12 +27,12 @@
             <% } %>
             
             <% if(isAuthenticated && path == '/index' || path == '/404'){ %>
-                <li class="main-header__item">
+                <!-- <li class="main-header__item">
                     <a class="<%= path === '/tutor' ? 'active' : '' %>" href="/tutor">Tutor</a>
                 </li>
                 <li class="main-header__item">
                     <a class="<%= path === '/student' ? 'active' : '' %> ml-3" href="/student">Student</a>
-                </li>
+                </li> -->
             <% } %>
         </ul>
         <ul class="main-header__item-list">

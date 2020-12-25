@@ -11,9 +11,20 @@ var canvas = require('canvas')
 var Clipper = require('image-clipper')
 var Razorpay = require('razorpay')
 
+
 var instance = new Razorpay({
   key_id: 'rzp_test_uHg1pC3lqMlNyl',
   key_secret: 'zq69JL3eH1zppEZd35u3qAkQ',
+})
+
+const paypal = require('paypal-rest-sdk')
+
+paypal.configure({
+  mode: 'sandbox', //sandbox or live
+  client_id:
+    'AUNJrY7eut6dU9fH9rWIULK0jpr5GvwABZGAHcuTgk3qNAkVaK281WHlP7x3yWAj5vrJPlCwEeZmOUt8',
+  client_secret:
+    'EF7pkgkUFXXiAgQjZ4Q1hP9RYu-Wl0r6m46Ms5thSoN-ybZtMlU9bw-k65qr7YRFmEpk8ATgHSXXZu0h',
 })
 
 const Tutor = require('../models/tutor')
@@ -1353,59 +1364,77 @@ exports.postDeleteEvents = (req, res, next) => {
     })
 }
 
+
 exports.postEventPayment = (req, res, next) => {
-  var eventId = req.body.eventId;
+  var eventId = req.body.eventId
   var eventIdString = req.body.eventId.toString()
-  var eventPrice = parseInt(req.body.eventPrice+'00')
-    var options = {
-      amount: eventPrice, // amount in the smallest currency unit
-      currency: 'INR',
-      receipt: eventIdString,
+  var eventPrice = parseInt(req.body.eventPrice + '00')
+
+  if (req.body.paymentMethod) {
+    if (req.body.paymentMethod == 'Razor') {
+      res.redirect(
+        '/tutor/events/details/pay/razor?eventId=' +
+          eventId +
+          '&eventPrice=' +
+          eventPrice
+      )
+    } else if (req.body.paymentMethod == 'Paypal') {
+      res.redirect(
+        '/tutor/events/details/pay/paypal?eventId=' +
+          eventId +
+          '&eventPrice=' +
+          eventPrice
+      )
     }
-    instance.orders.create(options, function (err, order) {
-      if(err){
-        console.log(err);
-      } else {
-        console.log(order)
-        Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
-          Student.find({ tutorId: tutor._id }, function (err, students) {
-            var studentAssignments = [];
-            for (let student of students) {
-              studentAssignments.push(student.assignments);
-            }
-            studentAssignments = studentAssignments
-            .flat()
-            .slice(Math.max(studentAssignments.length - 5, 0))
-            .sort(function (a, b) {
-              return new Date(a.date) - new Date(b.date)
-            })
-            .reverse()
+  } else {
+    Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+      Student.find({ tutorId: tutor._id }, function (err, students) {
+        var studentAssignments = []
+        for (let student of students) {
+          studentAssignments.push(student.assignments)
+        }
+        studentAssignments = studentAssignments
+          .flat()
+          .slice(Math.max(studentAssignments.length - 5, 0))
+          .sort(function (a, b) {
+            return new Date(a.date) - new Date(b.date)
+          })
+          .reverse()
 
           const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
-          res.render('tutor/events-payment', {
-            pageTitle: 'Dashboard',
-            path: '/tutor',
-            sPath: '/tutor/events',
-            name: tutor.name,
-            editing: false,
-            isAuthenticated: req.session.isTutorLoggedIn,
-            event: eventSingle,
-            notifyAssignments: studentAssignments,
-            eventOrder: order
-          })
+
+        res.render('tutor/events-payment', {
+          pageTitle: 'Dashboard',
+          path: '/tutor',
+          sPath: '/tutor/events',
+          name: tutor.name,
+          editing: false,
+          isAuthenticated: req.session.isTutorLoggedIn,
+          event: eventSingle,
+          notifyAssignments: studentAssignments,
+          eventAccess: eventSingle.eventAccess,
         })
       })
-      }
-      
-    }) 
+    })
+  }
 }
 
-exports.postEventPaymentVerify = (req, res, next) => {
+exports.postEventPaymentRazor = (req, res, next) => {
   var eventId = req.body.eventId
-  var razorpay_order_id = req.body.razorpay_order_id
-  var razorpay_payment_id = req.body.razorpay_payment_id
-  var razorpay_signature = req.body.razorpay_signature
-  
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice + '00')
+
+  //RazorPay
+  var options = {
+    amount: eventPrice, // amount in the smallest currency unit
+    currency: 'INR',
+    receipt: eventIdString,
+  }
+  instance.orders.create(options, function (err, order) {
+    if (err) {
+      console.log(err)
+    } else {
+      console.log(order)
       Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
         Student.find({ tutorId: tutor._id }, function (err, students) {
           var studentAssignments = []
@@ -1421,25 +1450,175 @@ exports.postEventPaymentVerify = (req, res, next) => {
             .reverse()
 
           const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
-          const crypto = require('crypto')
-          var secret = 'zq69JL3eH1zppEZd35u3qAkQ'
-          const hash = crypto
-            .createHmac('sha256', secret)
-            .update(razorpay_order_id + '|' + razorpay_payment_id)
-            .digest('hex')
-          
-          if (hash == razorpay_signature){
-            console.log('Payment Success');
-            eventSingle.eventAccess = true;
-            tutor.save();
-            res.redirect('/tutor/events/details/' + eventId)
-          } else {
-            console.log('Payment Failed')
-            res.redirect('/tutor/events')
-          }
+          res.render('tutor/events-payment-razor', {
+            pageTitle: 'Dashboard',
+            path: '/tutor',
+            sPath: '/tutor/events',
+            name: tutor.name,
+            editing: false,
+            isAuthenticated: req.session.isTutorLoggedIn,
+            event: eventSingle,
+            notifyAssignments: studentAssignments,
+            eventAccess: eventSingle.eventAccess,
+            eventOrder: order,
+          })
         })
       })
+    }
+  })
 }
+
+exports.postEventPaymentRazorVerify = (req, res, next) => {
+  var eventId = req.body.eventId
+  var razorpay_order_id = req.body.razorpay_order_id
+  var razorpay_payment_id = req.body.razorpay_payment_id
+  var razorpay_signature = req.body.razorpay_signature
+
+  Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+    Student.find({ tutorId: tutor._id }, function (err, students) {
+      var studentAssignments = []
+      for (let student of students) {
+        studentAssignments.push(student.assignments)
+      }
+      studentAssignments = studentAssignments
+        .flat()
+        .slice(Math.max(studentAssignments.length - 5, 0))
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+      const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
+      const crypto = require('crypto')
+      var secret = 'zq69JL3eH1zppEZd35u3qAkQ'
+      const hash = crypto
+        .createHmac('sha256', secret)
+        .update(razorpay_order_id + '|' + razorpay_payment_id)
+        .digest('hex')
+
+      if (hash == razorpay_signature) {
+        console.log('Payment Success')
+        eventSingle.eventAccess = true
+        return tutor
+          .save()
+          .then(() => {
+            res.redirect('/tutor/events/details/' + eventId)
+          })
+          .catch((err) => {
+            console.log(err)
+          })
+      } else {
+        console.log('Payment Failed')
+        res.redirect('/tutor/events')
+      }
+    })
+  })
+}
+
+exports.postEventPaymentPaypal = (req, res, next) => {
+  var eventId = req.body.eventId
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice)
+
+  //Paypal
+  var create_payment_json = {
+    intent: 'sale',
+    payer: {
+      payment_method: 'paypal',
+    },
+    redirect_urls: {
+      return_url:
+        'http://localhost:3000/tutor/events/details/pay/paypal/verify?eventId=' +
+        eventId,
+      cancel_url: 'http://localhost:3000/tutor/events',
+    },
+    transactions: [
+      {
+        item_list: {
+          items: [
+            {
+              name: eventIdString,
+              sku: '001',
+              price: eventPrice,
+              currency: 'INR',
+              quantity: 1,
+            },
+          ],
+        },
+        amount: {
+          currency: 'INR',
+          total: eventPrice,
+        },
+        description: 'This is the payment for an  Event.',
+      },
+    ],
+  }
+
+  paypal.payment.create(create_payment_json, function (error, payment) {
+    if (error) {
+      console.log(error)
+    } else {
+      console.log('Create Payment Response')
+      console.log(payment)
+      for (let i = 0; i < payment.links.length; i++) {
+        if (payment.links[i].rel === 'approval_url') {
+          res.redirect(payment.links[i].href)
+        }
+      }
+    }
+  })
+}
+
+exports.postEventPaymentPaypalVerify = (req, res, next) => {
+  var eventId = req.query.eventId
+
+  const payerId = req.query.PayerID
+  const paymentId = req.query.paymentId
+
+  Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+    Student.find({ tutorId: tutor._id }, function (err, students) {
+      const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
+
+      const execute_payment_json = {
+        payer_id: payerId,
+        transactions: [
+          {
+            amount: {
+              currency: 'INR',
+              total: eventSingle.eventPrice,
+            },
+          },
+        ],
+      }
+
+      paypal.payment.execute(
+        paymentId,
+        execute_payment_json,
+        function (error, payment) {
+          if (error) {
+            console.log(error.response)
+            res.redirect('/tutor/events')
+          } else {
+            console.log(JSON.stringify(payment))
+            // res.send('Success')
+            eventSingle.eventAccess = true
+            return tutor
+              .save()
+              .then(() => {
+                var eventLink = '/tutor/events/details/' + eventId
+                res.redirect(eventLink)
+              })
+              .catch((err) => {
+                console.log(err)
+              })
+          }
+        }
+      )
+    })
+  })
+}
+
+
 
 exports.getPhotos = (req, res, next) => {
   Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {

@@ -13,6 +13,16 @@ var instance = new Razorpay({
   key_secret: 'zq69JL3eH1zppEZd35u3qAkQ',
 })
 
+const paypal = require('paypal-rest-sdk')
+
+paypal.configure({
+  mode: 'sandbox', //sandbox or live
+  client_id:
+    'AUNJrY7eut6dU9fH9rWIULK0jpr5GvwABZGAHcuTgk3qNAkVaK281WHlP7x3yWAj5vrJPlCwEeZmOUt8',
+  client_secret:
+    'EF7pkgkUFXXiAgQjZ4Q1hP9RYu-Wl0r6m46Ms5thSoN-ybZtMlU9bw-k65qr7YRFmEpk8ATgHSXXZu0h',
+})
+
 const Student = require('../models/student')
 const Tutor = require('../models/tutor')
 
@@ -647,10 +657,63 @@ exports.getEventDetails = (req, res, next) => {
   })
 }
 
-exports.postEventPayment = (req, res, next) => {
+
+exports.postEventPayment = (req,res,next) => {
   var eventId = req.body.eventId
   var eventIdString = req.body.eventId.toString()
   var eventPrice = parseInt(req.body.eventPrice + '00')
+
+  
+
+  if (req.body.paymentMethod){
+    if (req.body.paymentMethod == 'Razor') {
+      res.redirect(
+        '/student/events/details/pay/razor?eventId=' +
+          eventId +
+          '&eventPrice=' +
+          eventPrice
+      )
+    } else if (req.body.paymentMethod == 'Paypal') {
+      res.redirect(
+        '/student/events/details/pay/paypal?eventId=' +
+          eventId +
+          '&eventPrice=' +
+          eventPrice
+      )
+    }
+  } else {
+    Student.findOne({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      const eventSingle = student.events.find(({ _id }) => _id == eventId)
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+      res.render('student/events-payment', {
+        pageTitle: 'Dashboard',
+        path: '/student',
+        sPath: '/student/events',
+        name: student.name,
+        editing: false,
+        isAuthenticated: req.session.isStudentLoggedIn,
+        event: eventSingle,
+        tutorAssignmentsNotes: tutorAssignmentsNotes,
+      })
+      })
+    })
+  }
+    
+}
+
+exports.postEventPaymentRazor = (req, res, next) => {
+  var eventId = req.body.eventId
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice + '00')
+
+  //RazorPay
   var options = {
     amount: eventPrice, // amount in the smallest currency unit
     currency: 'INR',
@@ -661,35 +724,40 @@ exports.postEventPayment = (req, res, next) => {
       console.log(err)
     } else {
       console.log(order)
-      Student.findById({ _id: req.session.student._id }, function (err, student) {
-        Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-          var tutorAssignmentsNotes = tutor.assignments
-            .concat(tutor.notes)
-            .flat()
-            .sort(function (a, b) {
-              return new Date(a.date) - new Date(b.date)
-            })
-            .reverse()
+      Student.findById(
+        { _id: req.session.student._id },
+        function (err, student) {
+          Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+            var tutorAssignmentsNotes = tutor.assignments
+              .concat(tutor.notes)
+              .flat()
+              .sort(function (a, b) {
+                return new Date(a.date) - new Date(b.date)
+              })
+              .reverse()
 
-          const eventSingle = student.events.find(({ _id }) => _id == eventId)
-          res.render('student/events-payment', {
-            pageTitle: 'Dashboard',
-            path: '/student',
-            sPath: '/student/events',
-            name: student.name,
-            editing: false,
-            isAuthenticated: req.session.isStudentLoggedIn,
-            tutorAssignmentsNotes: tutorAssignmentsNotes,
-            event: eventSingle,
-            eventOrder: order,
+            const eventSingle = student.events.find(({ _id }) => _id == eventId)
+            res.render('student/events-payment-razor', {
+              pageTitle: 'Dashboard',
+              path: '/student',
+              sPath: '/student/events',
+              name: student.name,
+              editing: false,
+              isAuthenticated: req.session.isStudentLoggedIn,
+              tutorAssignmentsNotes: tutorAssignmentsNotes,
+              event: eventSingle,
+              eventOrder: order,
+            })
           })
-        })
-      })
+        }
+      )
     }
   })
+
+  
 }
 
-exports.postEventPaymentVerify = (req, res, next) => {
+exports.postEventPaymentRazorVerify = (req, res, next) => {
   var eventId = req.body.eventId
   var razorpay_order_id = req.body.razorpay_order_id
   var razorpay_payment_id = req.body.razorpay_payment_id
@@ -716,20 +784,131 @@ exports.postEventPaymentVerify = (req, res, next) => {
       if (hash == razorpay_signature) {
         console.log('Payment Success')
         eventSingle.eventAccess = true
-        return student.save()
-        .then( () => {
-          res.redirect('/student/events/details/' + eventId)
-        })
-        .catch( err => {
-          console.log(err);
-        })
+        return student
+          .save()
+          .then(() => {
+            res.redirect('/student/events/details/' + eventId)
+          })
+          .catch((err) => {
+            console.log(err)
+          })
       } else {
         console.log('Payment Failed')
-        res.redirect('/tutor/events')
+        res.redirect('/student/events')
       }
     })
   })
 }
+
+exports.postEventPaymentPaypal = (req, res, next) => {
+  var eventId = req.body.eventId
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice)
+
+  //Paypal
+  var create_payment_json = {
+    intent: 'sale',
+    payer: {
+      payment_method: 'paypal',
+    },
+    redirect_urls: {
+      return_url:
+        'http://localhost:3000/student/events/details/pay/paypal/verify?eventId=' +eventId,
+      cancel_url: 'http://localhost:3000/student/events',
+    },
+    transactions: [
+      {
+        item_list: {
+          items: [
+            {
+              name: eventIdString,
+              sku: '001',
+              price: eventPrice,
+              currency: 'INR',
+              quantity: 1,
+            },
+          ],
+        },
+        amount: {
+          currency: 'INR',
+          total: eventPrice,
+        },
+        description: 'This is the payment for an  Event.',
+      },
+    ],
+  }
+
+  paypal.payment.create(create_payment_json, function (error, payment) {
+    if (error) {
+      console.log(error)
+    } else {
+      console.log('Create Payment Response')
+      console.log(payment)
+      for (let i = 0; i < payment.links.length; i++) {
+        if (payment.links[i].rel === 'approval_url') {
+          res.redirect(payment.links[i].href)
+        }
+      }
+    }
+  })
+}
+
+
+
+exports.postEventPaymentPaypalVerify = (req, res, next) => {
+  var eventId = req.query.eventId
+
+  console.log(eventId)
+
+  const payerId = req.query.PayerID
+  const paymentId = req.query.paymentId
+
+  Student.findById({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      
+
+      const eventSingle = student.events.find(({ _id }) => _id == eventId)
+
+  const execute_payment_json = {
+    payer_id: payerId,
+    transactions: [
+      {
+        amount: {
+          currency: 'INR',
+          total: eventSingle.eventPrice,
+        },
+      },
+    ],
+  }
+
+  paypal.payment.execute(
+    paymentId,
+    execute_payment_json,
+    function (error, payment) {
+      if (error) {
+        console.log(error.response)
+        res.redirect('/student/events')
+      } else {
+        console.log(JSON.stringify(payment))
+        // res.send('Success')
+        eventSingle.eventAccess = true
+        return student
+          .save()
+          .then(() => {
+            var eventLink = '/student/events/details/'+eventId;
+            res.redirect(eventLink)
+          })
+          .catch((err) => {
+            console.log(err)
+          })
+      }
+    }
+  )
+  })
+  })
+}
+
+
 
 exports.getNotes = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {

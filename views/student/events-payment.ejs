@@ -34,70 +34,46 @@
     <%- include('../includes/navigation.ejs') %>
     <%- include('./nav.ejs') %>
         <div id="tutorContent">
-          <button id="rzp-button1">Pay</button>
+          <div class="col-md-8" id="divNotFile">
+          <div class="card-body">
+            <h4 class="card-title text-left mb-2">Event : <%= event.eventHead %></h4>
+            <h5 class="card-title text-left mb-2">Conducting By : <%= event.eventBy %></h5>
+            <h5 class="card-title text-left mb-2">Topic : <%= event.topic %></h5>
+            <div class="card-footer bg-transparent border-dark ">Date : <%= event.date %></div>
+          </div>
+
+          <form action="/student/events/details/pay/razor" method="post" id="eventPaymentFormRazor">
+            <input type="hidden" name="eventId" id="eventId" value="<%= event._id %>">
+            <input type="hidden" name="eventPrice" id="eventPriceRazor">
+            <input type="hidden" name="paymentMethod" value="Razor">
+            <button type="button" class="btn btn-primary mb-3 mt-3" onclick="postPaymentRazor()">Pay Rs. <%= event.eventPrice %><br>Razor Pay</button>
+          </form>  
+
+          <form action="/student/events/details/pay/paypal" method="post" id="eventPaymentFormPaypal">
+            <input type="hidden" name="eventId" id="eventId" value="<%= event._id %>">
+            <input type="hidden" name="eventPrice" id="eventPricePaypal">
+            <input type="hidden" name="paymentMethod" value="Paypal">
+            <button type="button" class="btn btn-primary mb-3 mt-3" onclick="postPaymentPaypal()">Pay Rs. <%= event.eventPrice %><br>PayPal</button>
+          </form> 
+          
+          </div>
         </div>
-        <form action="/student/events/details/pay/verify" method="post" id="paymentForm" style="display: none;">
-          <input type="hidden" name="eventId" id="eventId" value="<%= eventOrder.receipt %>">
-          <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
-          <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
-          <input type="hidden" name="razorpay_signature" id="razorpay_signature">
 
-        </form>
-
-        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
         <script>
-  var options = {
-    "key": "rzp_test_uHg1pC3lqMlNyl", // Enter the Key ID generated from the Dashboard
-    "amount": "<%= eventOrder.amount %>", // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
-    "currency": "INR",
-    "name": "Acme Corp",
-    "description": "Test Transaction",
-    "image": "https://example.com/your_logo",
-    "order_id": "<%= eventOrder.id %>", //This is a sample Order ID. Pass the `id` obtained in the response of Step 1
-    "handler": function (response){
-        // alert(response.razorpay_payment_id);
-        // alert(response.razorpay_order_id);
-        // alert(response.razorpay_signature);
-        verifyPayment(response)
-    },
-    "prefill": {
-        "name": "Gaurav Kumar",
-        "email": "gaurav.kumar@example.com",
-        "contact": "9999999999"
-    },
-    "notes": {
-        "address": "Razorpay Corporate Office"
-    },
-    "theme": {
-        "color": "#3399cc"
-    }
-  };
-  var rzp1 = new Razorpay(options);
-  rzp1.on('payment.failed', function (response){
-        alert(response.error.code);
-        alert(response.error.description);
-        alert(response.error.source);
-        alert(response.error.step);
-        alert(response.error.reason);
-        alert(response.error.metadata.order_id);
-        alert(response.error.metadata.payment_id);
-  });
-  document.getElementById('rzp-button1').onclick = function(e){
-    rzp1.open();
-    e.preventDefault();
-  }
+          function postPaymentRazor(){
+            var form = document.getElementById('eventPaymentFormRazor');
+            document.getElementById('eventPriceRazor').value = '<%= event.eventPrice %>'
+            form.submit();
+          }
 
-  function verifyPayment(response){
-    console.log(response);
-    var form = document.getElementById('paymentForm');
-    document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
-    document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
-    document.getElementById('razorpay_signature').value = response.razorpay_signature;
-    form.submit()
-  }
-</script>
+          function postPaymentPaypal(){
+            var form = document.getElementById('eventPaymentFormPaypal');
+            document.getElementById('eventPricePaypal').value = '<%= event.eventPrice %>'
+            form.submit();
+          }
+        </script>
 <script>
-        const height = window.innerHeight;
-        document.getElementById("sidebar").style.height = height+'px';
-    </script>
+  const height = window.innerHeight;
+  document.getElementById("sidebar").style.height = height+'px';
+</script>
 <%- include('../includes/end.ejs') %>

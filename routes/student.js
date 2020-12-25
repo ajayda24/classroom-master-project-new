@@ -76,11 +76,21 @@ router.get('/events', studentAuth, studentController.getEvents)
 // /student/events/details => GET
 router.get('/events/details/:eventId',studentAuth,studentController.getEventDetails)
 
-// /tutor/events/details/pay => POST
+
+// /student/events/details/pay => POST
 router.post('/events/details/pay',studentAuth,studentController.postEventPayment)
 
-// /tutor/events/details/pay/verify => POST
-router.post('/events/details/pay/verify',studentAuth,studentController.postEventPaymentVerify)
+// /student/events/details/pay/razor => POST
+router.post('/events/details/pay/razor',studentAuth,studentController.postEventPaymentRazor)
+
+// /student/events/details/pay/razor/verify => POST
+router.post('/events/details/pay/razor/verify',studentAuth,studentController.postEventPaymentRazorVerify)
+
+// /student/events/details/pay/paypal => POST
+router.post('/events/details/pay/paypal',studentAuth,studentController.postEventPaymentPaypal)
+
+// /student/events/details/pay/paypal/verify => POST
+router.get('/events/details/pay/paypal/verify',studentAuth,studentController.postEventPaymentPaypalVerify)
 
 // /student/notes => GET
 router.get('/notes',studentAuth, studentController.getNotes);

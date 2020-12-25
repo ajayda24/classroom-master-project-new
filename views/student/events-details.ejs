@@ -98,11 +98,13 @@
             <h5 class="card-title text-left mb-2">Topic : <%= event.topic %></h5>
             <div class="card-footer bg-transparent border-dark ">Date : <%= event.date %></div>
           </div>
+
           <form action="/student/events/details/pay" method="post" id="eventPaymentForm">
             <input type="hidden" name="eventId" id="eventId" value="<%= event._id %>">
             <input type="hidden" name="eventPrice" id="eventPrice">
             <button type="button" class="btn btn-primary mb-3 mt-3" onclick="postPayment()">Pay Rs. <%= event.eventPrice %></button>
           </form>  
+          
         </div>
         <% } else { %>
           <% if(event.file){ %>

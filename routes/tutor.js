@@ -120,11 +120,22 @@ router.post('/events/add',tutorAuth, tutorController.postAddEvents);
 // /tutor/events/details => GET
 router.get('/events/details/:eventId',tutorAuth, tutorController.getEventsDetails);
 
+
 // /tutor/events/details/pay => POST
 router.post('/events/details/pay', tutorAuth, tutorController.postEventPayment)
 
-// /tutor/events/details/pay/verify => POST
-router.post('/events/details/pay/verify',tutorAuth,tutorController.postEventPaymentVerify)
+// /tutor/events/details/pay/razor => POST
+router.post('/events/details/pay/razor',tutorAuth,tutorController.postEventPaymentRazor)
+
+// /tutor/events/details/pay/razor/verify => POST
+router.post('/events/details/pay/razor/verify',tutorAuth,tutorController.postEventPaymentRazorVerify)
+
+// /tutor/events/details/pay/paypal => POST
+router.post('/events/details/pay/paypal',tutorAuth,tutorController.postEventPaymentPaypal)
+
+// /tutor/events/details/pay/paypal/verify => POST
+router.get('/events/details/pay/paypal/verify',tutorAuth,tutorController.postEventPaymentPaypalVerify)
+
 
 // /tutor/events/delete => POST
 router.post('/events/delete',tutorAuth, tutorController.postDeleteEvents);
