@@ -105,7 +105,9 @@ mongoose
     useFindAndModify: false,
   })
   .then((result) => {
-    const server = app.listen(port)
+    const server = app.listen(port, function(){
+      console.log('Server started at port 3000');
+    })
     const io = require('./socket').init(server)
     io.on('connection', (socket) => {
       console.log('Client Connected');
