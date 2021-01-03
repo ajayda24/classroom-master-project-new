@@ -67,11 +67,11 @@ const studentsSchema = new Schema({
       file: String,
       filetype: String,
       filename: String,
-      paidEvent: String,
+      paidEvent: Boolean,
       eventPrice: String,
       eventAccess: Boolean,
       updatedAt: String,
-      modifiedAt: String
+      modifiedAt: String,
     },
   ],
   chat: [
@@ -79,6 +79,8 @@ const studentsSchema = new Schema({
       date: String,
       message: String,
       chatType: String,
+      voiceUrl: String,
+      voiceType: String
     },
   ],
 })

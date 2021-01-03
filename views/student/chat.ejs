@@ -135,7 +135,7 @@ html, body {
 .chat-submit {  
   position:absolute;
   bottom:3px;
-  right:10px;
+  right:30px;
   background: transparent;
   box-shadow:none;
   border:none;
@@ -143,6 +143,19 @@ html, body {
   color:#5A5EB9;
   width:35px;
   height:35px;  
+}
+.chat-voice {  
+  position:absolute;
+  bottom:3px;
+  right:1px;
+  background: transparent;
+  box-shadow:none;
+  border:none;
+  border-radius:50%;
+  color:#5A5EB9;
+  width:35px;
+  height:35px;
+  font-size: 1.4rem;  
 }
 .chat-logs {
   padding:15px; 
@@ -283,6 +296,9 @@ html, body {
   <%- include('../includes/navigation.ejs') %>
     <%- include('./nav.ejs') %>
 <div id="body" style="margin: auto;" style="position: absolute; top: 0px;"> 
+  <script>
+    $(".chat-logs").stop().animate({ scrollTop: $(".chat-logs")[0].scrollHeight }, 1000);
+  </script>
   <div class="row">
   <!-- <div class="col-md-3"> -->
   <!-- </div> -->
@@ -290,7 +306,7 @@ html, body {
     <!-- <div class="col-md-8"> -->
       <div class="chat-box">
       <div class="chat-box-header">
-        Chat 2 Tutor
+        <%= tutor.name %>
       </div>
       <div class="chat-box-body">
         <div class="chat-box-overlay">   
@@ -299,24 +315,38 @@ html, body {
           <% for( let chat of chats) { %>
             
             <% if(chat.sId) { %>
-              <div id="cm-msg-" class="chat-msg user">      
-                <div class="cm-msg-text"><%= chat.message %></div>     
-              </div>
+              <% if(!chat.voiceUrl) { %>
+                <div id="cm-msg-" class="chat-msg user">      
+                  <div class="cm-msg-text"><%= chat.message %></div>     
+                </div>
+              <% } else { %>
+                <div id="cm-msg-" class="chat-msg user">      
+                  <audio controls class="cm-msg-text" src="/<%= chat.voiceUrl %>"></audio>     
+                </div>
+              <% } %>
             <% } else { %>
-              <div id="cm-msg-" class="chat-msg self">      
-                <div class="cm-msg-text"><%= chat.message %></div>     
-              </div>
+              <% if(!chat.voiceUrl) { %>
+                <div id="cm-msg-" class="chat-msg self">      
+                  <div class="cm-msg-text"><%= chat.message %></div>     
+                </div>
+              <% } else { %>
+                <div id="cm-msg-" class="chat-msg self">      
+                  <audio controls class="cm-msg-text" src="/<%= chat.voiceUrl %>"></audio>     
+                </div>
+              <% } %>
             <% } %>
           <% } %>
         </div>
 
       <div class="chat-input">      
-        <form  action="/student/chat/add" method="post" id="chatSend">
+        <form  action="/student/chat/add" method="post" id="chatSend" enctype="multipart/form-data">
           <input type="hidden" name="sId" value="<%= student._id %>">
-            <input type="text" id="chat-input" placeholder="Send a message..." name="chatMessage" autocomplete="off">
+            <input type="text" id="chat-input" placeholder="Send a message..." name="chatMessage" autocomplete="off" >
           <button type="submit" class="chat-submit" id="chat-submit"><i   class="material-icons">send</i></button>
+          <button type="submit" class="chat-voice" id="btnStart"><i class="fas fa-microphone"></i></button>
         </form>      
       </div>
+
     </div>
   </div>
   <!-- </div> -->
@@ -354,11 +384,97 @@ $(function () {
       $("#chat-input").val('');
     }
     $(".chat-logs").stop().animate({ scrollTop: $(".chat-logs")[0].scrollHeight }, 1000);
+  } 
+});
+
+var voiceRecord = true;
+
+// $(".chat-voice").click(function (e) {
+//     e.preventDefault();
 
     
-  }
+    let audioIN = { audio: true }; 
+    navigator.mediaDevices.getUserMedia(audioIN) 
+      .then(function (mediaStreamObj) { 
+        var voiceBtn = document.querySelector('.chat-voice')
+        var start = document.querySelector('#btnStart'); 
+        var stop = document.getElementById('#btnStop'); 
+        var mediaRecorder = new MediaRecorder(mediaStreamObj); 
+
+        
+          
+        
+        // let playAudio = document.getElementById('adioPlay'); 
+          voiceBtn.addEventListener('click', function (ev) { 
+            ev.preventDefault();
+            if(voiceRecord){
+              console.log('if block');
+              document.querySelector('.chat-voice').style.color = '#ff0000'
+              document.querySelector('#chat-input').placeholder = 'Recording ...'
+              document.querySelector('#chat-submit').disabled = true
+              mediaRecorder.start(); 
+              document.querySelector('.chat-voice').setAttribute('id','btnStop')
+              voiceRecord = false
+            } else {
+              console.log('else block');
+              document.querySelector('.chat-voice').style.color = '#5A5EB9'
+              document.querySelector('#chat-input').placeholder = 'Send a message...'
+              document.querySelector('#chat-submit').disabled = false
+              mediaRecorder.stop(); 
+              voiceRecord = true
+              document.querySelector('.chat-voice').setAttribute('id','btnStart')
+            // console.log(mediaRecorder.state); 
+            }
+          }) 
+        
   
-});
+        mediaRecorder.ondataavailable = function (ev) { 
+          dataArray.push(ev.data); 
+        } 
+  
+        let dataArray = []; 
+  
+        mediaRecorder.onstop = async function (ev) { 
+  
+          let audioData = new Blob(dataArray,{ 'type': 'audio/wav;' }); 
+            
+          dataArray = []; 
+  
+          let audioSrc = window.URL 
+              .createObjectURL(audioData); 
+  
+          // Pass the audio url to the 2nd video tag 
+          // playAudio.src = audioSrc; 
+
+          var str = "";
+          str += "<div id='cm-msg' class=\"chat-msg self\">";
+          str += "          <audio controls src='"+audioSrc+"' class=\"cm-msg-text\">";
+          str += "          <\/audio>";
+          str += "        <\/div>";
+          $(".chat-logs").append(str);
+          $("#cm-msg-").hide().fadeIn(300);
+
+            let formData = new FormData();
+            formData.append("files", audioData, "audio.wav");
+
+            let response = await fetch('/student/chat/add', {
+              method: 'POST',
+              body: formData
+            });
+
+            if(response){
+              location.reload()
+            }
+            // let result =  response.json();
+            console.log(response);
+          
+          $(".chat-logs").stop().animate({ scrollTop: $(".chat-logs")[0].scrollHeight }, 1000);
+
+        } 
+
+      });  
+
+  // });
     </script>
  
 
@@ -368,9 +484,15 @@ $(function () {
 </script>
 
 <script>
+  $(".chat-logs").stop().animate({ scrollTop: $(".chat-logs")[0].scrollHeight },-20);
+</script>
+
+<script>
     
     openSocket.on('chat', data => {
             $( "#body" ).load(window.location.href + " #body" );
+            $(".chat-logs").stop().animate({ scrollTop: $(".chat-logs")[0].scrollHeight }, 1000);
+            location.reload()
     });
 </script>
 <%- include('../includes/end.ejs') %>

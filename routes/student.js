@@ -92,6 +92,9 @@ router.post('/events/details/pay/paypal',studentAuth,studentController.postEvent
 // /student/events/details/pay/paypal/verify => POST
 router.get('/events/details/pay/paypal/verify',studentAuth,studentController.postEventPaymentPaypalVerify)
 
+// /student/events/details/pay/paytm => POST
+router.post('/events/details/pay/paytm',studentAuth,studentController.postEventPaymentPaytm)
+
 // /student/notes => GET
 router.get('/notes',studentAuth, studentController.getNotes);
 
@@ -106,6 +109,12 @@ router.get('/chat', studentAuth, studentController.getChat)
 
 // /tutor/chat/add => POST
 router.post('/chat/add', studentAuth, studentController.postChatAdd)
+
+// /tutor/chat/video => GET
+router.get('/chat/video', studentAuth, studentController.getVideoChat)
+
+
+
 
 // /student/login => GET
 router.get('/login', studentController.getLogin);

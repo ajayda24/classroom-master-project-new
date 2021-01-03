@@ -13,8 +13,8 @@ const indexController = require('./controllers/index')
 const Tutor = require('./models/tutor')
 const Student = require('./models/student')
 
-const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
-// const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
+// const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
+const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
 
 const app = express()
 const store = new MongoDBStore({
@@ -61,6 +61,10 @@ app.use(express.static(path.join(__dirname, 'public')))
 app.use('/tutorFiles', express.static(path.join(__dirname, 'tutorFiles')))
 app.use('/studentFiles', express.static(path.join(__dirname, 'studentFiles')))
 
+const studentController = require('./controllers/student')
+
+
+
 app.use((req, res, next) => {
   if (!req.session.tutor) {
     return next()
@@ -87,11 +91,16 @@ app.use((req, res, next) => {
 })
 
 // app.use('/admin', adminRoutes);
+app.use('/paytmCallback', studentController.postEventPaymentPaytmVerify)
+
 
 app.use('/tutor', tutorRoutes)
 app.use('/student', studentRoutes)
 app.get('/', indexController.getIndex)
+
 app.use(errorController.get404)
+
+
 
 let port = process.env.PORT
 if (port == null || port == '') {
@@ -109,9 +118,38 @@ mongoose
       console.log('Server started at port 3000');
     })
     const io = require('./socket').init(server)
+    let clients = 0
+
     io.on('connection', (socket) => {
       console.log('Client Connected');
+
+      socket.on('NewClient', function () {
+        if (clients < 2) {
+          if (clients == 1) {
+            this.emit('CreatePeer')
+          }
+        } else this.emit('SessionActive')
+        clients++
+      })
+      socket.on('Offer', SendOffer)
+      socket.on('Answer', SendAnswer)
+      socket.on('disconnect', Disconnect)
     })
+
+    function Disconnect() {
+      if (clients > 0) {
+        if (clients <= 2) this.broadcast.emit('Disconnect')
+        clients--
+      }
+    }
+
+    function SendOffer(offer) {
+      this.broadcast.emit('BackOffer', offer)
+    }
+
+    function SendAnswer(data) {
+      this.broadcast.emit('BackAnswer', data)
+    }
   })
   .catch((err) => {
     console.log(err)

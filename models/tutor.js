@@ -77,7 +77,7 @@ const tutorSchema = new Schema({
       file: String,
       filetype: String,
       filename: String,
-      paidEvent: String,
+      paidEvent: Boolean,
       eventPrice: String,
       eventAccess: Boolean,
       updatedAt: String,
@@ -103,6 +103,8 @@ const tutorSchema = new Schema({
       time: String,
       message: String,
       sId: String,
+      voiceUrl: String,
+      voiceType: String,
     },
   ],
 })

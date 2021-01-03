@@ -158,6 +158,9 @@ router.get('/chat', tutorAuth, tutorController.getChat)
 // /tutor/chat/add => POST
 router.post('/chat/add', tutorAuth, tutorController.postChatAdd)
 
+// /tutor/chat/video => GET
+router.get('/chat/video', tutorAuth, tutorController.getVideoChat)
+
 
 
 

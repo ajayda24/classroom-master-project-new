@@ -1,5 +1,16 @@
 const fs = require('fs')
 const path = require('path')
+const https = require('https')
+
+const express = require('express')
+
+const parseUrl = express.urlencoded({ extended: false })
+const parseJson = express.json({ extended: false })
+
+const checksum_lib = require('../paytm/checksum')
+const config = require('../paytm/config')
+
+var PaytmChucksum = require('../paytm/chucksumOfficial')
 
 const deletFiles = require('../util/deleteFiles')
 const io = require('../socket')
@@ -7,6 +18,7 @@ const io = require('../socket')
 const bcrypt = require('bcryptjs')
 var unirest = require('unirest')
 var Razorpay = require('razorpay')
+var qs = require('querystring')
 
 var instance = new Razorpay({
   key_id: 'rzp_test_uHg1pC3lqMlNyl',
@@ -455,7 +467,8 @@ exports.getAnnouncementsDetails = (req, res, next) => {
 exports.getEvents = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-      const tutorEvents = tutor.events.sort(function (a, b) {
+      const tutorEvents = tutor.events
+        .sort(function (a, b) {
           return new Date(a.date) - new Date(b.date)
         })
         .reverse()
@@ -477,12 +490,16 @@ exports.getEvents = (req, res, next) => {
         second: '2-digit',
       })
 
-      // var tutorUpdatedAt = tutorEvents.filter(({ updatedAt }) => updatedAt == today)
-      
-      var studentAllEvent = student.events.reverse();
-      var studentLastEvent = studentAllEvent[0];
-      var events = [];
-      if (studentLastEvent){
+      var studentAllEvent = student.events.reverse()
+      var studentLastEvent = studentAllEvent[0]
+      var events = []
+
+      // var tutorEventsNotInStudent = tutorEvents.filter(
+      //   ({ updatedAt }) => updatedAt != studentLastEvent.updatedAt
+      // )
+      // console.log(tutorEventsNotInStudent)
+
+      if (studentLastEvent) {
         if (
           studentLastEvent.modifiedAt != today ||
           studentLastEvent.modifiedAt != null ||
@@ -490,7 +507,7 @@ exports.getEvents = (req, res, next) => {
           studentLastEvent.modifiedAt != ''
         ) {
           for (var i = 0; i < tutorEvents.length; i++) {
-            if (tutorEvents[i].paidEvent == true){
+            if (tutorEvents[i].paidEvent == true) {
               var studentEvents = {
                 eventHead: tutorEvents[i].eventHead,
                 eventBy: tutorEvents[i].eventBy,
@@ -525,8 +542,7 @@ exports.getEvents = (req, res, next) => {
           student.save()
           // var studentEvents = []
           // var events = studentEvents.concat(tutorEvents)
-
-        } 
+        }
       } else {
         for (var i = 0; i < tutorEvents.length; i++) {
           if (tutorEvents[i].paidEvent == true) {
@@ -559,15 +575,12 @@ exports.getEvents = (req, res, next) => {
               modifiedAt: today,
             }
           }
-          
+
           student.events.push(studentEvents)
-          
         }
-        
+
         student.save()
       }
-
-      
 
       res.render('student/events', {
         pageTitle: 'Dashboard',
@@ -657,15 +670,12 @@ exports.getEventDetails = (req, res, next) => {
   })
 }
 
-
-exports.postEventPayment = (req,res,next) => {
+exports.postEventPayment = (req, res, next) => {
   var eventId = req.body.eventId
   var eventIdString = req.body.eventId.toString()
   var eventPrice = parseInt(req.body.eventPrice + '00')
 
-  
-
-  if (req.body.paymentMethod){
+  if (req.body.paymentMethod) {
     if (req.body.paymentMethod == 'Razor') {
       res.redirect(
         '/student/events/details/pay/razor?eventId=' +
@@ -683,29 +693,28 @@ exports.postEventPayment = (req,res,next) => {
     }
   } else {
     Student.findOne({ _id: req.session.student._id }, function (err, student) {
-    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-      const eventSingle = student.events.find(({ _id }) => _id == eventId)
-      var tutorAssignmentsNotes = tutor.assignments
-        .concat(tutor.notes)
-        .flat()
-        .sort(function (a, b) {
-          return new Date(a.date) - new Date(b.date)
+      Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+        const eventSingle = student.events.find(({ _id }) => _id == eventId)
+        var tutorAssignmentsNotes = tutor.assignments
+          .concat(tutor.notes)
+          .flat()
+          .sort(function (a, b) {
+            return new Date(a.date) - new Date(b.date)
+          })
+          .reverse()
+        res.render('student/events-payment', {
+          pageTitle: 'Dashboard',
+          path: '/student',
+          sPath: '/student/events',
+          name: student.name,
+          editing: false,
+          isAuthenticated: req.session.isStudentLoggedIn,
+          event: eventSingle,
+          tutorAssignmentsNotes: tutorAssignmentsNotes,
         })
-        .reverse()
-      res.render('student/events-payment', {
-        pageTitle: 'Dashboard',
-        path: '/student',
-        sPath: '/student/events',
-        name: student.name,
-        editing: false,
-        isAuthenticated: req.session.isStudentLoggedIn,
-        event: eventSingle,
-        tutorAssignmentsNotes: tutorAssignmentsNotes,
-      })
       })
     })
   }
-    
 }
 
 exports.postEventPaymentRazor = (req, res, next) => {
@@ -753,8 +762,6 @@ exports.postEventPaymentRazor = (req, res, next) => {
       )
     }
   })
-
-  
 }
 
 exports.postEventPaymentRazorVerify = (req, res, next) => {
@@ -813,7 +820,8 @@ exports.postEventPaymentPaypal = (req, res, next) => {
     },
     redirect_urls: {
       return_url:
-        'http://localhost:3000/student/events/details/pay/paypal/verify?eventId=' +eventId,
+        'http://localhost:3000/student/events/details/pay/paypal/verify?eventId=' +
+        eventId,
       cancel_url: 'http://localhost:3000/student/events',
     },
     transactions: [
@@ -853,62 +861,180 @@ exports.postEventPaymentPaypal = (req, res, next) => {
   })
 }
 
-
-
 exports.postEventPaymentPaypalVerify = (req, res, next) => {
   var eventId = req.query.eventId
-
-  console.log(eventId)
 
   const payerId = req.query.PayerID
   const paymentId = req.query.paymentId
 
   Student.findById({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-      
-
       const eventSingle = student.events.find(({ _id }) => _id == eventId)
 
-  const execute_payment_json = {
-    payer_id: payerId,
-    transactions: [
-      {
-        amount: {
-          currency: 'INR',
-          total: eventSingle.eventPrice,
-        },
-      },
-    ],
-  }
-
-  paypal.payment.execute(
-    paymentId,
-    execute_payment_json,
-    function (error, payment) {
-      if (error) {
-        console.log(error.response)
-        res.redirect('/student/events')
-      } else {
-        console.log(JSON.stringify(payment))
-        // res.send('Success')
-        eventSingle.eventAccess = true
-        return student
-          .save()
-          .then(() => {
-            var eventLink = '/student/events/details/'+eventId;
-            res.redirect(eventLink)
-          })
-          .catch((err) => {
-            console.log(err)
-          })
+      const execute_payment_json = {
+        payer_id: payerId,
+        transactions: [
+          {
+            amount: {
+              currency: 'INR',
+              total: eventSingle.eventPrice,
+            },
+          },
+        ],
       }
-    }
-  )
-  })
+
+      paypal.payment.execute(
+        paymentId,
+        execute_payment_json,
+        function (error, payment) {
+          if (error) {
+            console.log(error.response)
+            res.redirect('/student/events')
+          } else {
+            console.log(JSON.stringify(payment))
+            // res.send('Success')
+            eventSingle.eventAccess = true
+            return student
+              .save()
+              .then(() => {
+                var eventLink = '/student/events/details/' + eventId
+                res.redirect(eventLink)
+              })
+              .catch((err) => {
+                console.log(err)
+              })
+          }
+        }
+      )
+    })
   })
 }
 
+exports.postEventPaymentPaytm = (req, res, next) => {
+  var eventId = req.body.eventId
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice)
+  Student.findById({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      const eventSingle = student.events.find(({ _id }) => _id == eventId)
 
+
+      //--------------------------------------------------
+
+      // var paymentDetails = {
+      //   amount: eventSingle.eventPrice,
+      //   customerId: student._id,
+      //   customerEmail: student.email,
+      //   customerPhone: student.mobile,
+      // }
+
+      var paymentDetails = {
+        amount: req.body.eventPrice.toString(),
+        customerId: student._id.toString(),
+        customerEmail: student.email.toString(),
+        customerPhone: student.mobile.toString(),
+      }
+
+      if (
+        !paymentDetails.amount ||
+        !paymentDetails.customerId ||
+        !paymentDetails.customerEmail ||
+        !paymentDetails.customerPhone
+      ) {
+        res.status(400).send('Payment failed')
+      } else {
+        var params = {}
+        params['MID'] = config.PaytmConfig.mid
+        params['WEBSITE'] = config.PaytmConfig.website
+        params['CHANNEL_ID'] = 'WEB'
+        params['INDUSTRY_TYPE_ID'] = 'Retail'
+        params['ORDER_ID'] = 'Class@Home' + new Date().getTime()
+        params['CUST_ID'] = paymentDetails.customerId
+        params['TXN_AMOUNT'] = paymentDetails.amount
+        params['CALLBACK_URL'] =
+          'http://localhost:3000/paytmCallback?eventId=' + eventId + '&studentId=' + student._id
+        params['EMAIL'] = paymentDetails.customerEmail
+        params['MOBILE_NO'] = paymentDetails.customerPhone
+
+        checksum_lib.genchecksum(
+          params,
+          config.PaytmConfig.key,
+          function (err, checksum) {
+            var txn_url =
+              'https://securegw-stage.paytm.in/theia/processTransaction' // for staging
+            // var txn_url = "https://securegw.paytm.in/theia/processTransaction"; // for production
+
+            var form_fields = ''
+            for (var x in params) {
+              form_fields +=
+                "<input type='hidden' name='" +
+                x +
+                "' value='" +
+                params[x] +
+                "' >"
+            }
+            form_fields +=
+              "<input type='hidden' name='CHECKSUMHASH' value='" +
+              checksum +
+              "' >"
+
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.write(
+              '<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Please do not refresh this page...</h1></center><form method="post" action="' +
+                txn_url +
+                '" name="f1">' +
+                form_fields +
+                '</form><script type="text/javascript">document.f1.submit();</script></body></html>'
+            )
+
+            res.end()
+          }
+        )
+      }
+    })
+  })
+}
+
+exports.postEventPaymentPaytmVerify = (req, res, next) => {
+  // // Route for verifiying payment
+  const eventId = req.query.eventId
+  const studentId = req.query.studentId
+  
+
+      paytmChecksum = req.body.CHECKSUMHASH
+      if (!paytmChecksum){
+        return res.redirect('/student/events')
+      } 
+      delete req.body.CHECKSUMHASH
+
+      var isVerifySignature = PaytmChucksum.verifySignature(
+        req.body,
+        'kZ0isefnXLWiUmuf',
+        paytmChecksum
+      )
+      if (isVerifySignature) {
+        console.log('Checksum Matched')
+        Student.findById({ _id: studentId }, function (err, student) {
+          Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+            const eventSingle = student.events.find(({ _id }) => _id == eventId)
+            eventSingle.eventAccess = true
+            return student
+              .save()
+              .then(() => {
+                var eventLink = '/student/events/details/' + eventId
+                res.redirect(eventLink)
+              })
+              .catch((err) => {
+                console.log(err)
+              })
+          })
+        })
+      } else {
+        console.log('Checksum Mismatched')
+        res.redirect('/student/events')
+      }
+   
+}
 
 exports.getNotes = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
@@ -1054,6 +1180,7 @@ exports.getChat = (req, res, next) => {
         tutorAssignmentsNotes: tutorAssignmentsNotes,
         chats: tutorStudentChat,
         student: student,
+        tutor: tutor
       })
     })
   })
@@ -1062,6 +1189,11 @@ exports.getChat = (req, res, next) => {
 exports.postChatAdd = (req, res, next) => {
   const sId = req.body.sId
   const message = req.body.chatMessage
+  const voice = req.file
+  if (voice) {
+    var voiceUrl = voice.path
+    var voiceType = voice.mimetype
+  }
   const date = new Date().toLocaleDateString(undefined, {
     day: '2-digit',
     month: '2-digit',
@@ -1074,10 +1206,20 @@ exports.postChatAdd = (req, res, next) => {
   Student.findOne({ _id: req.session.student._id })
     .then((student) => {
       var chat = {}
-      chat = {
-        message: message,
-        date: date,
+      if (voice){
+        chat = {
+          message: message,
+          date: date,
+          voiceUrl: voiceUrl,
+          voiceType: voiceType,
+        }
+      } else {
+        chat = {
+          message: message,
+          date: date
+        }
       }
+        
       student.chat.push(chat)
       return student.save()
     })
@@ -1092,6 +1234,37 @@ exports.postChatAdd = (req, res, next) => {
       console.log(err)
     })
 }
+
+exports.getVideoChat = (req, res, next) => {
+  Student.findOne({ _id: req.session.student._id }, function (err, student) {
+    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+      const announcement = tutor.announcements.reverse()
+      var tutorAssignmentsNotes = tutor.assignments
+        .concat(tutor.notes)
+        .flat()
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+
+      res.render('student/video-chat', {
+        pageTitle: 'Dashboard',
+        path: '/student',
+        sPath: '/student/chat',
+        name: student.name,
+        editing: false,
+        isAuthenticated: req.session.isStudentLoggedIn,
+        tutorAssignmentsNotes: tutorAssignmentsNotes,
+      })
+
+      io.getIO().emit('NewClient')
+    })
+  })
+}
+
+
+
 
 //Login Routes
 exports.getLogin = (req, res, next) => {

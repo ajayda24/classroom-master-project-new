@@ -3,6 +3,7 @@ const path = require('path')
 
 const deletFiles = require('../util/deleteFiles')
 const io = require('../socket')
+const sIo = require('socket.io')
 
 const mongoose = require('mongoose')
 const bcrypt = require('bcryptjs')
@@ -1787,6 +1788,7 @@ exports.getChat = (req, res, next) => {
           return new Date(a.date) - new Date(b.date)
         })
 
+
         res.render('tutor/chat', {
           pageTitle: 'Dashboard',
           path: '/tutor',
@@ -1825,6 +1827,7 @@ exports.getChat = (req, res, next) => {
             return new Date(a.date) - new Date(b.date)
           })
 
+
         res.render('tutor/chat', {
           pageTitle: 'Dashboard',
           path: '/tutor',
@@ -1849,6 +1852,11 @@ exports.getChat = (req, res, next) => {
 exports.postChatAdd = (req, res, next) => {
   const sId = req.body.sId
   const message = req.body.chatMessage
+  const voice = req.file
+  if (voice) {
+    var voiceUrl = voice.path
+    var voiceType = voice.mimetype
+  }
   const date = new Date().toLocaleDateString(undefined, {
     day: '2-digit',
     month: '2-digit',
@@ -1861,10 +1869,20 @@ exports.postChatAdd = (req, res, next) => {
   Tutor.findOne({ _id: req.session.tutor._id })
     .then((tutor) => {
       var chat = {}
-      chat = {
-        message: message,
-        date: date,
-        sId: sId,
+      if (voice) {
+        chat = {
+          message: message,
+          date: date,
+          sId: sId,
+          voiceUrl: voiceUrl,
+          voiceType: voiceType,
+        }
+      } else {
+        chat = {
+          message: message,
+          date: date,
+          sId: sId,
+        }
       }
       tutor.chat.push(chat)
       return tutor.save()
@@ -1873,6 +1891,7 @@ exports.postChatAdd = (req, res, next) => {
       io.getIO().emit('chat', {
         action: 'chat-add'
       })
+      console.log(sId);
       var redirectUrl = '/tutor/chat/?studentId='+sId;
       res.redirect(redirectUrl)
     })
@@ -1880,6 +1899,39 @@ exports.postChatAdd = (req, res, next) => {
       console.log(err)
     })
 }
+
+exports.getVideoChat = (req,res,next) => {
+
+  Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+    Student.find({ tutorId: tutor._id }, function (err, students) {
+      var studentAssignments = []
+      for (let student of students) {
+        studentAssignments.push(student.assignments)
+      }
+      studentAssignments = studentAssignments
+        .flat()
+        .slice(Math.max(studentAssignments.length - 5, 0))
+        .sort(function (a, b) {
+          return new Date(a.date) - new Date(b.date)
+        })
+        .reverse()
+
+      res.render('tutor/video-chat', {
+        pageTitle: 'Dashboard',
+        path: '/tutor',
+        sPath: '/tutor/chat',
+        name: tutor.name,
+        editing: false,
+        isAuthenticated: req.session.isTutorLoggedIn,
+        notifyAssignments: studentAssignments,
+      })
+
+      io.getIO().emit('NewClient')
+    })
+  })
+}
+
+
 
 //Login Routes
 exports.getLogin = (req, res, next) => {
