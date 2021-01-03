@@ -1926,7 +1926,7 @@ exports.getVideoChat = (req,res,next) => {
         notifyAssignments: studentAssignments,
       })
 
-      io.getIO().emit('NewClient')
+      // io.getIO().emit('NewClient')
     })
   })
 }

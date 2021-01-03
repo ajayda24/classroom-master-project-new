@@ -1258,7 +1258,7 @@ exports.getVideoChat = (req, res, next) => {
         tutorAssignmentsNotes: tutorAssignmentsNotes,
       })
 
-      io.getIO().emit('NewClient')
+      // io.getIO().emit('NewClient')
     })
   })
 }
