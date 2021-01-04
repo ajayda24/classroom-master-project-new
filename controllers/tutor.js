@@ -40,6 +40,7 @@ exports.getIndex = (req, res, next) => {
       fs.mkdirSync(folderName)
     }
   } catch (err) {
+    console.log(err);
     const error = new Error(err)
     error.httpStatusCode = 500
     return next(error)
@@ -186,8 +187,8 @@ exports.postEditProfile = (req, res, next) => {
       profile.address = updatedAddress
 
       if (file) {
-        if (!profile.photo == '') {
-          deletFiles.deleteFile(profile.photo)
+        if (fs.existsSync(profile.photo)) {
+          deletFiles.deleteFile(profile.photo, next)
         }
         profile.photo = fileUrl
       }

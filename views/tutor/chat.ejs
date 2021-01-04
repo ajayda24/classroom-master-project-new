@@ -55,8 +55,8 @@ html, body {
 .chat-box {
   display:block;
   background: #efefef;
-  position: absolute;
-  top: 100px;
+  /* position: absolute;
+  top: 100px; */
   margin: auto; 
   width:350px;
   max-width: 85vw;
@@ -80,7 +80,7 @@ html, body {
   padding-top:17px;
 }
 .chat-box-body {
-  position: relative;  
+  /* position: relative;   */
   height:370px;  
   height:auto;
   border:1px solid #ccc;  
@@ -133,9 +133,9 @@ html, body {
   color: #ccc;
 }
 .chat-submit {  
-  position:absolute;
-  bottom:3px;
-  right:30px;
+  position: relative;
+  top: 45px;
+  left: 270px;
   background: transparent;
   box-shadow:none;
   border:none;
@@ -143,11 +143,12 @@ html, body {
   color:#5A5EB9;
   width:35px;
   height:35px;  
+  z-index: 1500;
 }
 .chat-voice {  
-  position:absolute;
-  bottom:3px;
-  right:1px;
+  position: relative;
+  top: 40px;
+  left: 270px;
   background: transparent;
   box-shadow:none;
   border:none;
@@ -155,7 +156,8 @@ html, body {
   color:#5A5EB9;
   width:35px;
   height:35px;
-  font-size: 1.4rem;  
+  font-size: 1.4rem; 
+  z-index: 1500; 
 }
 .chat-logs {
   padding:15px; 
@@ -260,9 +262,9 @@ html, body {
 .chat-user{
   display:block;
   background: #efefef;
-  position: absolute;
+  /* position: absolute;
   top: 100px;
-  left: 545px;
+  left: 545px; */
   margin: auto; 
   width:180px;
   max-width: 85vw;
@@ -286,6 +288,43 @@ html, body {
 .selectedUser{
   background: #393c74;
 }
+
+@media only screen and (max-width: 768px) {
+  .row{
+    margin-top: 20px;
+  }
+  .chat-user{
+    width: 34%;
+    margin-left: 10px;
+  }
+  .chat-box {
+    width: 57%;
+    margin-right: 20px;
+  }
+  .chat-box-body{
+    height: 300px;
+  }
+  .chat-submit {  
+    position:absolute;
+    left:300px; 
+    top: 415px; 
+  }
+  .chat-voice {  
+    position:absolute;
+    left:325px;
+    top: 410px; 
+  }
+
+}
+
+@media only screen and (min-width: 768px) {
+  
+  
+  .chat-box-body{
+    height: 450px;
+  }
+
+}
 </style>
 
 
@@ -295,12 +334,11 @@ html, body {
 <body translate="no" >
   <%- include('../includes/navigation.ejs') %>
     <%- include('./nav.ejs') %>
-<div id="body" style="margin: auto;" style="position: absolute; top: 0px;"> 
+<div id="body" style="margin: auto;" > 
   <script>
     $(".chat-logs").stop().animate({ scrollTop: $(".chat-logs")[0].scrollHeight }, 1000);
   </script>
   <div class="row">
-  <!-- <div class="col-md-3"> -->
     <div class="chat-user">
       <div class="chat-box-header">
         Students
@@ -316,9 +354,6 @@ html, body {
         </div>
       </div>
       </div>
-  <!-- </div> -->
-    
-    <!-- <div class="col-md-8"> -->
       <div class="chat-box">
       <div class="chat-box-header">
         <% if(isChat) { %>
@@ -367,18 +402,18 @@ html, body {
         <form  action="/tutor/chat/add" method="post" id="chatSend" enctype="multipart/form-data">
           <input type="hidden" name="sId" value="<%= queryStudent %>">
           <% if(isChat) { %>
-            <input type="text" id="chat-input" placeholder="Send a message..." name="chatMessage" autocomplete="off">
             <button type="submit" class="chat-submit" id="chat-submit"><i   class="material-icons">send</i></button>
             <button type="submit" class="chat-voice" id="btnStart"><i class="fas fa-microphone"></i></button>
+            <input type="text" id="chat-input" placeholder="Send a message..." name="chatMessage" autocomplete="off">
+            
           <% } else { %>
-            <input type="text" id="chat-input" placeholder="Select a Chat" name="chatMessage" disabled autocomplete="off">
+            <input type="text" id="chat-input" placeholder="Select a Chat" name="chatMessage" disabled autocomplete="off" autofocus>
           <% } %>
           
         </form>      
       </div>
     </div>
   </div>
-  <!-- </div> -->
   </div>
 </div>
 <script src="https://cpwebassets.codepen.io/assets/common/stopExecutionOnTimeout-157cd5b220a5c80d4ff8e0e70ac069bffd87a61252088146915e8726e5d9f147.js"></script>
