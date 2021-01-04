@@ -323,9 +323,11 @@ html, body {
       <div class="chat-box-header">
         <% if(isChat) { %>
           <%= student.name %>
+          <a href="/chat/video" class="ml-4"><i class="fas fa-video"></i> </a> 
         <% } else { %>
           Chat Box
-        <% } %>    
+        <% } %>   
+        
       </div>
       <div class="chat-box-body">
         <div class="chat-box-overlay">   

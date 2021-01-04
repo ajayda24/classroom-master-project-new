@@ -89,7 +89,7 @@
             </head>
             <body>
                 <center>
-            <div id="container" style="width: 25rem;">
+            <div id="container" style="width: 22rem;">
             <h2 style="text-align:center">My Profile</h2>
             
             <div class="card text-center ">
@@ -126,5 +126,9 @@
         </div>
     </center>
     </div>
+    <script>
+      const sHeight = window.innerHeight;
+      document.getElementById('sidebar').style.height = sHeight+20+'px'
+    </script>
     
 <%- include('../includes/end.ejs') %>

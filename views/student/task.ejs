@@ -132,5 +132,12 @@
         $('#table_note').DataTable();
         $('#table_old_assignment').DataTable();
     });
+    
     </script>
+
+    <script>
+      const sHeight = document.body.scrollHeight;
+      document.getElementById('sidebar').style.height = sHeight+sHeight+'px';
+    </script>
+
 <%- include('../includes/end.ejs') %>

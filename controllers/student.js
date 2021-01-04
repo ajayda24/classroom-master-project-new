@@ -311,7 +311,9 @@ exports.postAddAssignments = (req, res, next) => {
       res.redirect('/student/assignments')
     })
     .catch((err) => {
-      console.log(err)
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
     })
 }
 
@@ -406,7 +408,9 @@ exports.postDeleteAssignments = (req, res, next) => {
       res.redirect('/student/assignments')
     })
     .catch((err) => {
-      console.log(err)
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
     })
 }
 
@@ -797,7 +801,9 @@ exports.postEventPaymentRazorVerify = (req, res, next) => {
             res.redirect('/student/events/details/' + eventId)
           })
           .catch((err) => {
-            console.log(err)
+            const error = new Error(err)
+            error.httpStatusCode = 500
+            return next(error)
           })
       } else {
         console.log('Payment Failed')
@@ -901,7 +907,9 @@ exports.postEventPaymentPaypalVerify = (req, res, next) => {
                 res.redirect(eventLink)
               })
               .catch((err) => {
-                console.log(err)
+                const error = new Error(err)
+                error.httpStatusCode = 500
+                return next(error)
               })
           }
         }
@@ -1025,7 +1033,9 @@ exports.postEventPaymentPaytmVerify = (req, res, next) => {
                 res.redirect(eventLink)
               })
               .catch((err) => {
-                console.log(err)
+                const error = new Error(err)
+                error.httpStatusCode = 500
+                return next(error)
               })
           })
         })
@@ -1231,7 +1241,9 @@ exports.postChatAdd = (req, res, next) => {
       res.redirect(redirectUrl)
     })
     .catch((err) => {
-      console.log(err)
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
     })
 }
 
@@ -1313,7 +1325,11 @@ exports.postLogin = (req, res, next) => {
           res.redirect('/student/login')
         })
     })
-    .catch((err) => console.log(err))
+    .catch((err) => {
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
+    })
 }
 
 exports.postSignup = (req, res, next) => {
@@ -1342,7 +1358,9 @@ exports.postSignup = (req, res, next) => {
         })
     })
     .catch((err) => {
-      console.log(err)
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
     })
 }
 
@@ -1395,7 +1413,11 @@ exports.postSendOtp = (request, response, next) => {
           })
         })
     })
-    .catch((err) => console.log(err))
+    .catch((err) => {
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
+    })
 }
 
 exports.postOtpVerify = (request, response, next) => {
@@ -1431,7 +1453,13 @@ exports.postOtpVerify = (request, response, next) => {
 
 exports.postLogout = (req, res, next) => {
   req.session.destroy((err) => {
-    console.log(err)
-    res.redirect('/')
+    if(err){
+      const error = new Error(err)
+      error.httpStatusCode = 500
+      return next(error)
+    } else {
+      res.redirect('/')
+    }
+    
   })
 }

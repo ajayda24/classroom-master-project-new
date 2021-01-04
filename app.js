@@ -13,8 +13,8 @@ const indexController = require('./controllers/index')
 const Tutor = require('./models/tutor')
 const Student = require('./models/student')
 
-const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
-// const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
+// const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
+const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
 
 const app = express()
 const store = new MongoDBStore({
@@ -75,7 +75,9 @@ app.use((req, res, next) => {
       req.tutor = tutor
       next()
     })
-    .catch((err) => console.log(err))
+    .catch((err) => {
+      next(new Error(err))
+    })
 })
 
 app.use((req, res, next) => {
@@ -87,18 +89,36 @@ app.use((req, res, next) => {
       req.student = student
       next()
     })
-    .catch((err) => console.log(err))
+    .catch((err) => {
+      next(new Error(err))
+    })
 })
 
 // app.use('/admin', adminRoutes);
 app.use('/paytmCallback', studentController.postEventPaymentPaytmVerify)
+
+app.get('/chat/video', studentController.getVideoChat)
 
 
 app.use('/tutor', tutorRoutes)
 app.use('/student', studentRoutes)
 app.get('/', indexController.getIndex)
 
+app.get('/500', errorController.get500)
+
 app.use(errorController.get404)
+
+
+
+app.use((error, req, res, next) => {
+  // res.status(error.httpStatusCode).render(...);
+  // res.redirect('/500');
+  res.status(500).render('500', {
+    pageTitle: 'Error!',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn,
+  })
+})
 
 
 
@@ -123,17 +143,17 @@ mongoose
     io.on('connection', (socket) => {
       console.log('Client Connected');
 
-      socket.on('NewClient', function () {
-        if (clients < 2) {
-          if (clients == 1) {
-            this.emit('CreatePeer')
-          }
-        } else this.emit('SessionActive')
-        clients++
-      })
-      socket.on('Offer', SendOffer)
-      socket.on('Answer', SendAnswer)
-      socket.on('disconnect', Disconnect)
+      // socket.on('NewClient', function () {
+      //   if (clients < 2) {
+      //     if (clients == 1) {
+      //       this.emit('CreatePeer')
+      //     }
+      //   } else this.emit('SessionActive')
+      //   clients++
+      // })
+      // socket.on('Offer', SendOffer)
+      // socket.on('Answer', SendAnswer)
+      // socket.on('disconnect', Disconnect)
     })
 
     function Disconnect() {

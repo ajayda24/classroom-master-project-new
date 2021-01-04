@@ -58,10 +58,21 @@
          $('#sidebar').toggleClass('active');
      });
      const sWidth = window.innerWidth;
+
      if(sWidth <= 768){
-     $('#tutorContent').on('click', function () {
-         $('#sidebar').removeClass('active');
-     });
+        $('#sidebar').removeClass('active');
+        $('#tutorContent').on('click', function () {
+            $('#sidebar').removeClass('active');
+        });
+    
+
+        var body = document.body
+        var html = document.documentElement;
+
+        var sHeight = Math.max( body.scrollHeight, body.offsetHeight, html.clientHeight, html.scrollHeight, html.offsetHeight );
+
+        document.getElementById('sidebar').style.height = sHeight+'px';
+
     }
  });
 </script>

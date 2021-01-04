@@ -7627,8 +7627,11 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         }
 
         function RemovePeer() {
-            document.getElementById("peerVideo").remove();
-            document.getElementById("muteText").remove();
+            $("#peerVideo").remove();
+            $("#muteText").remove();
+
+            // peerVideo.parentNode.removeChild(peerVideo)
+            // muteText.parentNode.removeChild(muteText)
             if (client.peer) {
                 client.peer.destroy()
                 location.reload()
