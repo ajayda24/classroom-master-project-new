@@ -41,9 +41,9 @@ exports.getIndex = (req, res, next) => {
     }
   } catch (err) {
     console.log(err);
-    const error = new Error(err)
-    error.httpStatusCode = 500
-    return next(error)
+    // const error = new Error(err)
+    // error.httpStatusCode = 500
+    // return next(error)
   }
 
   Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
