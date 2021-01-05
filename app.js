@@ -14,8 +14,8 @@ const indexController = require('./controllers/index')
 const Tutor = require('./models/tutor')
 const Student = require('./models/student')
 
-// const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
-const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
+const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
+// const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
 
 const app = express()
 const store = new MongoDBStore({
