@@ -162,6 +162,7 @@ exports.getAttendance = (req, res, next) => {
       const todayAttendance = student.attendance.find(
         ({ date }) => date == today
       )
+      console.log(todayAttendance)
       // const todayAttendance = student.attendance.filter(({ date }) => date);
 
       const attendanceNewEntry = student.attendance.reverse()
@@ -182,7 +183,7 @@ exports.getAttendance = (req, res, next) => {
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
         var lastUpdated = lastAttendance.lastUpdated
-        if (!todayAttendance != false && diffDays > 1 && lastUpdated != today) {
+        if (!todayAttendance  && diffDays > 1 && lastUpdated != today) {
           var z = new Date()
           for (var i = 0; i < diffDays; i++) {
             z.setDate(z.getDate() - i)
@@ -468,12 +469,12 @@ exports.getAnnouncementsDetails = (req, res, next) => {
   })
 }
 
-exports.getEvents = (req, res, next) => {
+exports.getEvents = async (req, res, next) => {
   Student.findOne({ _id: req.session.student._id }, function (err, student) {
     Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
       const tutorEvents = tutor.events
         .sort(function (a, b) {
-          return new Date(a.date) - new Date(b.date)
+          return new Date(a.updatedAt) - new Date(b.updatedAt)
         })
         .reverse()
 
@@ -494,60 +495,73 @@ exports.getEvents = (req, res, next) => {
         second: '2-digit',
       })
 
-      var studentAllEvent = student.events.reverse()
+
+      var studentAllEvent = student.events
+        .sort(function (a, b) {
+          return new Date(a.updatedAt) - new Date(b.updatedAt)
+        })
+        .reverse()
       var studentLastEvent = studentAllEvent[0]
+      var tutorLastEvent = tutorEvents[0]
       var events = []
 
-      // var tutorEventsNotInStudent = tutorEvents.filter(
-      //   ({ updatedAt }) => updatedAt != studentLastEvent.updatedAt
-      // )
-      // console.log(tutorEventsNotInStudent)
-
       if (studentLastEvent) {
-        if (
-          studentLastEvent.modifiedAt != today ||
-          studentLastEvent.modifiedAt != null ||
-          studentLastEvent.modifiedAt != undefined ||
-          studentLastEvent.modifiedAt != ''
-        ) {
-          for (var i = 0; i < tutorEvents.length; i++) {
-            if (tutorEvents[i].paidEvent == true) {
-              var studentEvents = {
-                eventHead: tutorEvents[i].eventHead,
-                eventBy: tutorEvents[i].eventBy,
-                topic: tutorEvents[i].topic,
-                date: tutorEvents[i].date,
-                file: tutorEvents[i].file,
-                filetype: tutorEvents[i].filetype,
-                filename: tutorEvents[i].filename,
-                paidEvent: tutorEvents[i].paidEvent,
-                eventPrice: tutorEvents[i].eventPrice,
-                eventAccess: false,
-                updatedAt: tutorEvents[i].updatedAt,
-                modifiedAt: today,
-              }
-            } else {
-              var studentEvents = {
-                eventHead: tutorEvents[i].eventHead,
-                eventBy: tutorEvents[i].eventBy,
-                topic: tutorEvents[i].topic,
-                date: tutorEvents[i].date,
-                file: tutorEvents[i].file,
-                filetype: tutorEvents[i].filetype,
-                filename: tutorEvents[i].filename,
-                paidEvent: tutorEvents[i].paidEvent,
-                eventPrice: tutorEvents[i].eventPrice,
-                updatedAt: tutorEvents[i].updatedAt,
-                modifiedAt: today,
-              }
-            }
-            events.push(studentEvents)
+        console.log('if block')
+
+        function comparer(otherArray) {
+          return function (current) {
+            return (
+              otherArray.filter(function (other) {
+                return other.topic == current.topic
+              }).length == 0
+            )
           }
-          student.save()
-          // var studentEvents = []
-          // var events = studentEvents.concat(tutorEvents)
         }
+
+        var onlyInA = tutorEvents.filter(comparer(studentAllEvent))
+        var onlyInB = studentAllEvent.filter(comparer(tutorEvents))
+
+        var tutorEventsNotInStudent = onlyInA.concat(onlyInB)
+
+        console.log(tutorEventsNotInStudent)
+
+        for (var i = 0; i < tutorEventsNotInStudent.length; i++) {
+          if (tutorEventsNotInStudent[i].paidEvent == true) {
+            var studentEvents = {
+              eventHead: tutorEventsNotInStudent[i].eventHead,
+              eventBy: tutorEventsNotInStudent[i].eventBy,
+              topic: tutorEventsNotInStudent[i].topic,
+              date: tutorEventsNotInStudent[i].date,
+              file: tutorEventsNotInStudent[i].file,
+              filetype: tutorEventsNotInStudent[i].filetype,
+              filename: tutorEventsNotInStudent[i].filename,
+              paidEvent: tutorEventsNotInStudent[i].paidEvent,
+              eventPrice: tutorEventsNotInStudent[i].eventPrice,
+              eventAccess: false,
+              updatedAt: tutorEventsNotInStudent[i].updatedAt,
+              modifiedAt: today,
+            }
+          } else {
+            var studentEvents = {
+              eventHead: tutorEventsNotInStudent[i].eventHead,
+              eventBy: tutorEventsNotInStudent[i].eventBy,
+              topic: tutorEventsNotInStudent[i].topic,
+              date: tutorEventsNotInStudent[i].date,
+              file: tutorEventsNotInStudent[i].file,
+              filetype: tutorEventsNotInStudent[i].filetype,
+              filename: tutorEventsNotInStudent[i].filename,
+              paidEvent: tutorEventsNotInStudent[i].paidEvent,
+              eventPrice: tutorEventsNotInStudent[i].eventPrice,
+              updatedAt: tutorEventsNotInStudent[i].updatedAt,
+              modifiedAt: today,
+            }
+          }
+          // events.push(studentEvents)
+          student.events.push(studentEvents)
+        }
+        student.save()
       } else {
+        console.log('else block')
         for (var i = 0; i < tutorEvents.length; i++) {
           if (tutorEvents[i].paidEvent == true) {
             var studentEvents = {
@@ -579,12 +593,12 @@ exports.getEvents = (req, res, next) => {
               modifiedAt: today,
             }
           }
-
+          // events.push(studentEvents)
           student.events.push(studentEvents)
         }
-
         student.save()
       }
+        
 
       res.render('student/events', {
         pageTitle: 'Dashboard',
@@ -920,6 +934,7 @@ exports.postEventPaymentPaypalVerify = (req, res, next) => {
 
 exports.postEventPaymentPaytm = (req, res, next) => {
   var eventId = req.body.eventId
+  console.log(eventId)
   var eventIdString = req.body.eventId.toString()
   var eventPrice = parseInt(req.body.eventPrice)
   Student.findById({ _id: req.session.student._id }, function (err, student) {
@@ -960,7 +975,10 @@ exports.postEventPaymentPaytm = (req, res, next) => {
         params['CUST_ID'] = paymentDetails.customerId
         params['TXN_AMOUNT'] = paymentDetails.amount
         params['CALLBACK_URL'] =
-          'http://localhost:3000/paytmCallback?eventId=' + eventId + '&studentId=' + student._id
+          'http://localhost:3000/studentPaytmCallback?eventId=' +
+          eventId +
+          '&studentId=' +
+          student._id
         params['EMAIL'] = paymentDetails.customerEmail
         params['MOBILE_NO'] = paymentDetails.customerPhone
 
@@ -1004,6 +1022,7 @@ exports.postEventPaymentPaytm = (req, res, next) => {
 }
 
 exports.postEventPaymentPaytmVerify = (req, res, next) => {
+  console.log('paytm student Controll');
   // // Route for verifiying payment
   const eventId = req.query.eventId
   const studentId = req.query.studentId
@@ -1025,18 +1044,24 @@ exports.postEventPaymentPaytmVerify = (req, res, next) => {
         Student.findById({ _id: studentId }, function (err, student) {
           Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
             const eventSingle = student.events.find(({ _id }) => _id == eventId)
-            eventSingle.eventAccess = true
-            return student
-              .save()
-              .then(() => {
-                var eventLink = '/student/events/details/' + eventId
-                res.redirect(eventLink)
-              })
-              .catch((err) => {
-                const error = new Error(err)
-                error.httpStatusCode = 500
-                return next(error)
-              })
+            console.log(eventId)
+            if(eventSingle){
+              
+              eventSingle.eventAccess = true
+              return student
+                .save()
+                .then(() => {
+                  var eventLink = '/student/events/details/' + eventId
+                  res.redirect(eventLink)
+                })
+                .catch((err) => {
+                  const error = new Error(err)
+                  error.httpStatusCode = 500
+                  return next(error)
+                })
+            } else {
+
+            }
           })
         })
       } else {
@@ -1283,10 +1308,19 @@ exports.getLogin = (req, res, next) => {
   if (req.session.isStudentLoggedIn) {
     res.redirect('/student')
   }
+
+  let message = req.flash('error')
+  if (message.length > 0) {
+    message = message[0]
+  } else {
+    message = null
+  }
+
   res.render('student/login', {
     path: '/login',
     pageTitle: 'Login',
     isAuthenticated: req.session.isStudentLoggedIn,
+    errorMessage: message
   })
 }
 
@@ -1304,6 +1338,7 @@ exports.postLogin = (req, res, next) => {
   Student.findOne({ email: email })
     .then((student) => {
       if (!student) {
+        req.flash('error', 'Invalid Email or Password')
         return res.redirect('/student/login')
       }
       bcrypt
@@ -1318,10 +1353,12 @@ exports.postLogin = (req, res, next) => {
               res.redirect('/student')
             })
           }
+          req.flash('error', 'Invalid Email or Password')
           res.redirect('/student/login')
         })
         .catch((err) => {
           console.log(err)
+          req.flash('error', 'Invalid Email or Password')
           res.redirect('/student/login')
         })
     })
@@ -1368,11 +1405,20 @@ exports.getOtpLogin = (req, res, next) => {
   if (req.session.isStudentLoggedIn) {
     res.redirect('/student')
   }
+
+  let message = req.flash('error')
+  if (message.length > 0) {
+    message = message[0]
+  } else {
+    message = null
+  }
+
   res.render('student/loginviaotp', {
     path: '/login',
     pageTitle: 'Login',
     isAuthenticated: req.session.isStudentLoggedIn,
     getOtp: false,
+    errorMessage: message
   })
 }
 
@@ -1381,8 +1427,8 @@ exports.postSendOtp = (request, response, next) => {
   Student.findOne({ mobile: mobile })
     .then((student) => {
       if (!student) {
-        console.log('No Student with this phone number')
-        return response.redirect('/student/login')
+        req.flash('error', 'Invalid Mobile No.')
+        return response.redirect('/student/login/otp')
       }
       var req = unirest('POST', 'https://d7networks.com/api/verifier/send')
         .headers({
@@ -1410,6 +1456,7 @@ exports.postSendOtp = (request, response, next) => {
             pageTitle: 'Login',
             isAuthenticated: false,
             getOtp: true,
+            errorMessage: null,
           })
         })
     })
@@ -1422,33 +1469,44 @@ exports.postSendOtp = (request, response, next) => {
 
 exports.postOtpVerify = (request, response, next) => {
   const getOtp = request.body.otp
-  var req = unirest('POST', 'https://d7networks.com/api/verifier/verify')
-    .headers({
-      Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
-    })
-    .field('otp_id', request.session.studentOtpId)
-    .field('otp_code', getOtp)
-    .end(function (res) {
-      if (res.error) {
-        console.log(res.error)
-      }
-      console.log(res.raw_body)
-      var otpDetails = res.raw_body
-      var b = JSON.parse(otpDetails)
-      if (b.status == 'success') {
-        Student.findOne({ mobile: request.session.studentOtpPhone }).then(
-          (student) => {
-            request.session.isStudentLoggedIn = true
-            request.session.student = student
-            return request.session.save((err) => {
-              response.redirect('/student')
-            })
-          }
-        )
-      } else {
-        response.redirect('/student/login')
-      }
-    })
+  if (request.session.studentOtpId) {
+    var req = unirest('POST', 'https://d7networks.com/api/verifier/verify')
+      .headers({
+        Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
+      })
+      .field('otp_id', request.session.studentOtpId)
+      .field('otp_code', getOtp)
+      .end(function (res) {
+        if (res.error) {
+          console.log(res.error)
+          request.flash('error', 'Invalid Otp')
+          response.redirect('/student/login/otp')
+        }
+        console.log(res.raw_body)
+        var otpDetails = res.raw_body
+        var b = JSON.parse(otpDetails)
+        if (b.status == 'success') {
+          Student.findOne({ mobile: request.session.studentOtpPhone }).then(
+            (student) => {
+              request.session.isStudentLoggedIn = true
+              request.session.student = student
+              return request.session.save((err) => {
+                response.redirect('/student')
+              })
+            }
+          )
+        } else {
+          console.log(b.status)
+          req.flash('error', 'Invalid Otp')
+          response.redirect('/student/login')
+        }
+      })
+  } else {
+    console.log('hello')
+    console.log(request.session.studentOtpId)
+    request.flash('error', 'Invalid Otp')
+    response.redirect('/student/login/otp')
+  }
 }
 
 exports.postLogout = (req, res, next) => {

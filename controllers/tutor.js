@@ -11,6 +11,12 @@ var unirest = require('unirest')
 var canvas = require('canvas')
 var Clipper = require('image-clipper')
 var Razorpay = require('razorpay')
+const { validationResult } = require('express-validator')
+
+const checksum_lib = require('../paytm/checksum')
+const config = require('../paytm/config')
+
+var PaytmChucksum = require('../paytm/chucksumOfficial')
 
 
 var instance = new Razorpay({
@@ -1220,7 +1226,7 @@ exports.postAddEvents = (req, res, next) => {
             filename: eventFileOriginalName,
             paidEvent: paidEvent,
             eventPrice: eventPrice,
-            eventAccess: false,
+            eventAccess: true,
             updatedAt: updatedAt,
           }
         } else {
@@ -1232,7 +1238,7 @@ exports.postAddEvents = (req, res, next) => {
             tutorId: tutorId,
             paidEvent: paidEvent,
             eventPrice: eventPrice,
-            eventAccess: false,
+            eventAccess: true,
             updatedAt: updatedAt,
           }
         }
@@ -1659,6 +1665,135 @@ exports.postEventPaymentPaypalVerify = (req, res, next) => {
 
 
 
+exports.postEventPaymentPaytm = (req, res, next) => {
+  var eventId = req.body.eventId
+  var eventIdString = req.body.eventId.toString()
+  var eventPrice = parseInt(req.body.eventPrice)
+  Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
+    Student.find({ tutorId: tutor._id }, function (err, students) {
+      const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
+
+      //--------------------------------------------------
+
+      // var paymentDetails = {
+      //   amount: eventSingle.eventPrice,
+      //   customerId: student._id,
+      //   customerEmail: student.email,
+      //   customerPhone: student.mobile,
+      // }
+
+      var paymentDetails = {
+        amount: req.body.eventPrice.toString(),
+        customerId: tutor._id.toString(),
+        customerEmail: tutor.email.toString(),
+        customerPhone: tutor.mobile.toString(),
+      }
+
+      if (
+        !paymentDetails.amount ||
+        !paymentDetails.customerId ||
+        !paymentDetails.customerEmail ||
+        !paymentDetails.customerPhone
+      ) {
+        res.status(400).send('Payment failed')
+      } else {
+        var params = {}
+        params['MID'] = config.PaytmConfig.mid
+        params['WEBSITE'] = config.PaytmConfig.website
+        params['CHANNEL_ID'] = 'WEB'
+        params['INDUSTRY_TYPE_ID'] = 'Retail'
+        params['ORDER_ID'] = 'Class@Home' + new Date().getTime()
+        params['CUST_ID'] = paymentDetails.customerId
+        params['TXN_AMOUNT'] = paymentDetails.amount
+        params['CALLBACK_URL'] =
+          'http://localhost:3000/tutorPaytmCallback?eventId=' +
+          eventId +
+          '&tutorId=' +
+          tutor._id
+        params['EMAIL'] = paymentDetails.customerEmail
+        params['MOBILE_NO'] = paymentDetails.customerPhone
+
+        checksum_lib.genchecksum(
+          params,
+          config.PaytmConfig.key,
+          function (err, checksum) {
+            var txn_url =
+              'https://securegw-stage.paytm.in/theia/processTransaction' // for staging
+            // var txn_url = "https://securegw.paytm.in/theia/processTransaction"; // for production
+
+            var form_fields = ''
+            for (var x in params) {
+              form_fields +=
+                "<input type='hidden' name='" +
+                x +
+                "' value='" +
+                params[x] +
+                "' >"
+            }
+            form_fields +=
+              "<input type='hidden' name='CHECKSUMHASH' value='" +
+              checksum +
+              "' >"
+
+            res.writeHead(200, { 'Content-Type': 'text/html' })
+            res.write(
+              '<html><head><title>Merchant Checkout Page</title></head><body><center><h1>Please do not refresh this page...</h1></center><form method="post" action="' +
+                txn_url +
+                '" name="f1">' +
+                form_fields +
+                '</form><script type="text/javascript">document.f1.submit();</script></body></html>'
+            )
+
+            res.end()
+          }
+        )
+      }
+    })
+  })
+}
+
+exports.postEventPaymentPaytmVerify = (req, res, next) => {
+  console.log('paytm tutor Controll')
+  // // Route for verifiying payment
+  const eventId = req.query.eventId
+  const tutorId = req.query.tutorId
+
+  paytmChecksum = req.body.CHECKSUMHASH
+  if (!paytmChecksum) {
+    return res.redirect('/tutor/events')
+  }
+  delete req.body.CHECKSUMHASH
+
+  var isVerifySignature = PaytmChucksum.verifySignature(
+    req.body,
+    'kZ0isefnXLWiUmuf',
+    paytmChecksum
+  )
+  if (isVerifySignature) {
+    console.log('Checksum Matched')
+    Tutor.findOne({ _id: tutorId }, function (err, tutor) {
+      Student.find({ tutorId: tutor._id }, function (err, students) {
+        const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
+        eventSingle.eventAccess = true
+        return tutor
+          .save()
+          .then(() => {
+            var eventLink = '/tutor/events/details/' + eventId
+            res.redirect(eventLink)
+          })
+          .catch((err) => {
+            const error = new Error(err)
+            error.httpStatusCode = 500
+            return next(error)
+          })
+      })
+    })
+  } else {
+    console.log('Checksum Mismatched')
+    res.redirect('/tutor/events')
+  }
+}
+
 exports.getPhotos = (req, res, next) => {
   Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
     Student.find({ tutorId: tutor._id }, function (err, students) {
@@ -1982,10 +2117,17 @@ exports.getLogin = (req, res, next) => {
   if (req.session.isTutorLoggedIn) {
     res.redirect('/tutor')
   }
+  let message = req.flash('error')
+  if (message.length > 0) {
+    message = message[0]
+  } else {
+    message = null
+  }
   res.render('tutor/login', {
     path: '/login',
     pageTitle: 'Login',
     isAuthenticated: req.session.isTutorLoggedIn,
+    errorMessage: message,
   })
 }
 
@@ -2000,9 +2142,11 @@ exports.getSignup = (req, res, next) => {
 exports.postLogin = (req, res, next) => {
   const email = req.body.email
   const password = req.body.password
+  const errros = validationResult(req)
   Tutor.findOne({ email: email })
     .then((tutor) => {
       if (!tutor) {
+        req.flash('error','Invalid Email or Password')
         return res.redirect('/tutor/login')
       }
       bcrypt
@@ -2017,6 +2161,7 @@ exports.postLogin = (req, res, next) => {
               res.redirect('/tutor')
             })
           }
+          req.flash('error', 'Invalid Email or Password')
           res.redirect('/tutor/login')
         })
         .catch((err) => {
@@ -2069,11 +2214,20 @@ exports.getOtpLogin = (req, res, next) => {
   if (req.session.isTutorLoggedIn) {
     res.redirect('/tutor')
   }
+
+  let message = req.flash('error')
+  if (message.length > 0) {
+    message = message[0]
+  } else {
+    message = null
+  }
+
   res.render('tutor/loginviaotp', {
     path: '/login',
     pageTitle: 'Login',
     isAuthenticated: req.session.isTutorLoggedIn,
     getOtp: false,
+    errorMessage: message
   })
 }
 
@@ -2082,7 +2236,8 @@ exports.postSendOtp = (request, response, next) => {
   Tutor.findOne({ mobile: mobile })
     .then((tutor) => {
       if (!tutor) {
-        return response.redirect('/tutor/login')
+        request.flash('error', 'Invalid Mobile No.')
+        response.redirect('/tutor/login/otp')
       }
       var req = unirest('POST', 'https://d7networks.com/api/verifier/send')
         .headers({
@@ -2090,7 +2245,7 @@ exports.postSendOtp = (request, response, next) => {
         })
         .field('mobile', '+91' + mobile)
         .field('sender_id', 'SMSINFO')
-        .field('message', 'Your otp code for Class@Home {code}')
+        .field('message', 'Your otp code for Class@Home is {code}')
         .field('expiry', '900')
         .followRedirect(false)
         .end(function (res) {
@@ -2105,11 +2260,14 @@ exports.postSendOtp = (request, response, next) => {
               request.session.tutorOtpId = smsId;
             }
 
+      
+
           response.render('tutor/loginviaotp', {
             path: '/login',
             pageTitle: 'Login',
             isAuthenticated: false,
             getOtp: true,
+            errorMessage: null,
           })
         })
     })
@@ -2122,34 +2280,41 @@ exports.postSendOtp = (request, response, next) => {
 
 exports.postOtpVerify = (request, response, next) => {
   const getOtp = request.body.otp;
-  var req = unirest('POST', 'https://d7networks.com/api/verifier/verify')
-    .headers({
-      Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
-    })
-    .field('otp_id', request.session.tutorOtpId)
-    .field('otp_code', getOtp)
-    .end(function (res) {
-      if (res.error) {
-        console.log(res.error)
-      }
-      console.log(res.raw_body)
-      var otpDetails = res.raw_body
-      var b = JSON.parse(otpDetails)
-      if (b.status == 'success') {
-        Tutor.findOne({ mobile: request.session.tutorOtpPhone })
-          .then((tutor) => {
-            request.session.isTutorLoggedIn = true;
-            request.session.tutor = tutor;
-            return request.session.save((err) => {
-
-              response.redirect('/tutor')
-            })
-          })
-        
-      } else {
-        response.redirect('/tutor/login')
-      }
-    })
+  if (request.session.tutorOtpId){
+    var req = unirest('POST', 'https://d7networks.com/api/verifier/verify')
+      .headers({
+        Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
+      })
+      .field('otp_id', request.session.tutorOtpId)
+      .field('otp_code', getOtp)
+      .end(function (res) {
+        if (res.error) {
+          console.log(res.error)
+          request.flash('error', 'Invalid Otp')
+          response.redirect('/tutor/login/otp')
+        }
+        console.log(res.raw_body)
+        var otpDetails = res.raw_body
+        var b = JSON.parse(otpDetails)
+        if (b.status == 'success') {
+          Tutor.findOne({ mobile: request.session.tutorOtpPhone }).then(
+            (tutor) => {
+              request.session.isTutorLoggedIn = true
+              request.session.tutor = tutor
+              return request.session.save((err) => {
+                response.redirect('/tutor')
+              })
+            }
+          )
+        } else {
+          request.flash('error', 'Invalid Otp')
+          response.redirect('/tutor/login/otp')
+        }
+      })
+  } else {
+    request.flash('error', 'Invalid Otp')
+    response.redirect('/tutor/login/otp')
+  }   
 }
 
 exports.postLogout = (req, res, next) => {

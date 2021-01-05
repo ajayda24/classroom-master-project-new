@@ -1,7 +1,7 @@
 const path = require('path');
 
 const express = require('express');
-// const { check, body } = require('express-validator/check')
+const { check, body } = require('express-validator')
 const multer = require('multer')
 
 const tutorController = require('../controllers/tutor');
@@ -136,6 +136,9 @@ router.post('/events/details/pay/paypal',tutorAuth,tutorController.postEventPaym
 
 // /tutor/events/details/pay/paypal/verify => POST
 router.get('/events/details/pay/paypal/verify',tutorAuth,tutorController.postEventPaymentPaypalVerify)
+
+// /student/events/details/pay/paytm => POST
+router.post('/events/details/pay/paytm',tutorAuth,tutorController.postEventPaymentPaytm)
 
 
 // /tutor/events/delete => POST

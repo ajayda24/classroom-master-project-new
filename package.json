@@ -16,6 +16,7 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
     "canvas": "^2.6.1",
+    "connect-flash": "^0.1.1",
     "connect-mongodb-session": "^2.0.3",
     "crypto": "^1.0.1",
     "dotenv": "^8.2.0",
@@ -40,6 +41,7 @@
     "socket.io": "^3.0.4",
     "socket.io-client": "^3.0.4",
     "unirest": "^0.6.0",
-    "util": "^0.12.3"
+    "util": "^0.12.3",
+    "uuidv4": "^6.2.6"
   }
 }

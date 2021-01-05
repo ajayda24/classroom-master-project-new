@@ -6,6 +6,7 @@ const bodyParser = require('body-parser')
 const mongoose = require('mongoose')
 const session = require('express-session')
 const MongoDBStore = require('connect-mongodb-session')(session)
+const flash = require('connect-flash')
 
 
 const errorController = require('./controllers/error')
@@ -13,8 +14,8 @@ const indexController = require('./controllers/index')
 const Tutor = require('./models/tutor')
 const Student = require('./models/student')
 
-const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
-// const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
+// const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
+const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
 
 const app = express()
 const store = new MongoDBStore({
@@ -39,6 +40,8 @@ app.use(
   })
 )
 
+app.use(flash());
+
 // const fileStorage = multer.diskStorage({
 //   destination: (req, file, cb) => {
 //     tutorId = req.session.tutor._id.toString()
@@ -62,6 +65,7 @@ app.use('/tutorFiles', express.static(path.join(__dirname, 'tutorFiles')))
 app.use('/studentFiles', express.static(path.join(__dirname, 'studentFiles')))
 
 const studentController = require('./controllers/student')
+const tutorController = require('./controllers/tutor')
 
 
 
@@ -95,7 +99,11 @@ app.use((req, res, next) => {
 })
 
 // app.use('/admin', adminRoutes);
-app.use('/paytmCallback', studentController.postEventPaymentPaytmVerify)
+
+
+app.use('/studentPaytmCallback', studentController.postEventPaymentPaytmVerify)
+app.use('/tutorPaytmCallback', tutorController.postEventPaymentPaytmVerify)
+  
 
 app.get('/chat/video', studentController.getVideoChat)
 

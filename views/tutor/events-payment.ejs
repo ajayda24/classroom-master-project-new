@@ -55,6 +55,14 @@
             <input type="hidden" name="paymentMethod" value="Paypal">
             <button type="button" class="btn btn-primary mb-3 mt-3" onclick="postPaymentPaypal()">Pay Rs. <%= event.eventPrice %><br>PayPal</button>
           </form> 
+
+          <form action="/tutor/events/details/pay/paytm" method="post" id="eventPaymentFormPaytm">
+            <input type="hidden" name="eventId" id="eventId" value="<%= event._id %>">
+            <input type="hidden" name="eventPrice" id="eventPricePaytm">
+            <input type="hidden" name="eventStudentId" id="eventStudentId">
+            <input type="hidden" name="paymentMethod" value="Paytm">
+            <button type="button" class="btn btn-primary mb-3 mt-3" onclick="postPaymentPaytm()">Pay Rs. <%= event.eventPrice %><br>Paytm</button>
+          </form>
           
           </div>
         </div>
@@ -69,6 +77,12 @@
           function postPaymentPaypal(){
             var form = document.getElementById('eventPaymentFormPaypal');
             document.getElementById('eventPricePaypal').value = '<%= event.eventPrice %>'
+            form.submit();
+          }
+
+          function postPaymentPaytm(){
+            var form = document.getElementById('eventPaymentFormPaytm');
+            document.getElementById('eventPricePaytm').value = '<%= event.eventPrice %>'
             form.submit();
           }
         </script>
