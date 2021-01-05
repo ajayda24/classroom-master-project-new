@@ -105,6 +105,7 @@ const tutorSchema = new Schema({
       sId: String,
       voiceUrl: String,
       voiceType: String,
+      videoId: Boolean
     },
   ],
 })

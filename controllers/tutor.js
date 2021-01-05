@@ -12,6 +12,7 @@ var canvas = require('canvas')
 var Clipper = require('image-clipper')
 var Razorpay = require('razorpay')
 const { validationResult } = require('express-validator')
+const { uuid } = require('uuidv4')
 
 const checksum_lib = require('../paytm/checksum')
 const config = require('../paytm/config')
@@ -1943,6 +1944,7 @@ exports.postDeleteImages = (req, res, next) => {
 
 exports.getChat = (req, res, next) => {
   var studentId = req.query.studentId;
+  var videoId = uuid()
   if (studentId == null || studentId == undefined || studentId == ''){
     Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
       Student.find({ tutorId: tutor._id }, function (err, allStudents) {
@@ -2019,6 +2021,7 @@ exports.getChat = (req, res, next) => {
           queryStudent: studentId,
           defaultStudentId: allStudents[0]._id,
           isChat: true,
+          videoId: videoId
         })
       })
     })
@@ -2080,9 +2083,11 @@ exports.postChatAdd = (req, res, next) => {
 }
 
 exports.getVideoChat = (req,res,next) => {
+  var videoId  = req.params.videoId;
+  // console.log(videoId)
 
-  Tutor.findOne({ _id: req.session.tutor._id }, function (err, tutor) {
-    Student.find({ tutorId: tutor._id }, function (err, students) {
+  Tutor.findOne({ _id: req.session.tutor._id },  function (err, tutor) {
+    Student.find({ tutorId: tutor._id }, async function (err, students) {
       var studentAssignments = []
       for (let student of students) {
         studentAssignments.push(student.assignments)
@@ -2095,6 +2100,37 @@ exports.getVideoChat = (req,res,next) => {
         })
         .reverse()
 
+      const sId = req.query.sId
+      console.log(sId)
+      const message1 = 'Tutor is inviting you to join the video chat \n Join via - '
+      const message2 = 'http://localhost:3000/chat/video/' + videoId
+      const date = new Date().toLocaleDateString(undefined, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+
+      // Tutor.findOne({ _id: req.session.tutor._id })
+      //   .then((tutor) => {
+      var chat = {}
+      chat1 = {
+        message: message1,
+        date: date,
+        sId: sId,
+      }
+      chat2 = {
+        message: message2,
+        date: date,
+        sId: sId,
+        videoId: true
+      }
+      tutor.chat.push(chat1)
+      tutor.chat.push(chat2)
+      var inviteVideo = await tutor.save()
+      
       res.render('tutor/video-chat', {
         pageTitle: 'Dashboard',
         path: '/tutor',
@@ -2104,8 +2140,9 @@ exports.getVideoChat = (req,res,next) => {
         isAuthenticated: req.session.isTutorLoggedIn,
         notifyAssignments: studentAssignments,
       })
-
-      // io.getIO().emit('NewClient')
+      io.getIO().emit('chat', {
+        action: 'chat-add',
+      })
     })
   })
 }

@@ -68,7 +68,6 @@ const studentController = require('./controllers/student')
 const tutorController = require('./controllers/tutor')
 
 
-
 app.use((req, res, next) => {
   if (!req.session.tutor) {
     return next()
@@ -100,7 +99,6 @@ app.use((req, res, next) => {
 
 // app.use('/admin', adminRoutes);
 
-
 app.use('/studentPaytmCallback', studentController.postEventPaymentPaytmVerify)
 app.use('/tutorPaytmCallback', tutorController.postEventPaymentPaytmVerify)
   
@@ -118,15 +116,15 @@ app.use(errorController.get404)
 
 
 
-app.use((error, req, res, next) => {
-  // res.status(error.httpStatusCode).render(...);
-  // res.redirect('/500');
-  res.status(500).render('500', {
-    pageTitle: 'Error!',
-    path: '/500',
-    isAuthenticated: req.session.isLoggedIn,
-  })
-})
+// app.use((error, req, res, next) => {
+//   // res.status(error.httpStatusCode).render(...);
+//   // res.redirect('/500');
+//   res.status(500).render('500', {
+//     pageTitle: 'Error!',
+//     path: '/500',
+//     isAuthenticated: req.session.isLoggedIn,
+//   })
+// })
 
 
 

@@ -326,9 +326,15 @@ html, body {
             
             <% if(chat.sId) { %>
               <% if(!chat.voiceUrl) { %>
-                <div id="cm-msg-" class="chat-msg user">      
-                  <div class="cm-msg-text"><%= chat.message %></div>     
-                </div>
+                <% if(chat.videoId){ %>
+                  <div id="cm-msg-" class="chat-msg user" >      
+                    <div class="cm-msg-text"><a href='<%= chat.message %>'><%= chat.message %></a></div>     
+                  </div>
+                <% } else { %>
+                  <div id="cm-msg-" class="chat-msg user">      
+                    <div class="cm-msg-text"><%= chat.message %></div>     
+                  </div>
+                <% } %>  
               <% } else { %>
                 <div id="cm-msg-" class="chat-msg user">      
                   <audio controls class="cm-msg-text" src="/<%= chat.voiceUrl %>"></audio>     
