@@ -17,7 +17,7 @@ const Student = require('./models/student')
 
 // const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.l53kc.mongodb.net/${process.env.MONGO_DATABASE}classroomDB`
 
-const MONGODB_URI = process.env.DATABASE_URL_LOCAL
+const MONGODB_URI = process.env.DATABASE_URL
 
 const app = express()
 const store = new MongoDBStore({
