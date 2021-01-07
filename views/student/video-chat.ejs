@@ -40,8 +40,8 @@
  <%- include('./nav.ejs') %>
 
 <script>
-    var openSocket = io('http://localhost:3000');
-    // var openSocket = io('https://master-classroom-management.herok   com');
+    var socket = io();
+    // var openSocket = io('https://master-classroom-management.heroku.com');
 </script>
 
  <a href="/student/chat"> <i class="fas fa-comment-dots" id="chatBox"></i></a>
@@ -81,6 +81,7 @@
             </div>
         </div>
      </div>
+
 
 
 

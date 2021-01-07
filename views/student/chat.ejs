@@ -316,7 +316,7 @@ html, body {
       <div class="chat-box">
       <div class="chat-box-header">
         <%= tutor.name %>
-        <a href="/chat/video" class="ml-4"><i class="fas fa-video"></i> </a>
+        <!-- <a href="/chat/video" class="ml-4"><i class="fas fa-video"></i> </a> -->
       </div>
       <div class="chat-box-body">
         <div class="chat-box-overlay">   
@@ -328,7 +328,7 @@ html, body {
               <% if(!chat.voiceUrl) { %>
                 <% if(chat.videoId){ %>
                   <div id="cm-msg-" class="chat-msg user" >      
-                    <div class="cm-msg-text"><a href='<%= chat.message %>'><%= chat.message %></a></div>     
+                    <a target="_blank" href='<%= chat.message %>'><div class="cm-msg-text" >Click to Join Video Chat</div>  </a>   
                   </div>
                 <% } else { %>
                   <div id="cm-msg-" class="chat-msg user">      

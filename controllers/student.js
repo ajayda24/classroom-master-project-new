@@ -21,18 +21,16 @@ var Razorpay = require('razorpay')
 var qs = require('querystring')
 
 var instance = new Razorpay({
-  key_id: 'rzp_test_uHg1pC3lqMlNyl',
-  key_secret: 'zq69JL3eH1zppEZd35u3qAkQ',
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 })
 
 const paypal = require('paypal-rest-sdk')
 
 paypal.configure({
   mode: 'sandbox', //sandbox or live
-  client_id:
-    'AUNJrY7eut6dU9fH9rWIULK0jpr5GvwABZGAHcuTgk3qNAkVaK281WHlP7x3yWAj5vrJPlCwEeZmOUt8',
-  client_secret:
-    'EF7pkgkUFXXiAgQjZ4Q1hP9RYu-Wl0r6m46Ms5thSoN-ybZtMlU9bw-k65qr7YRFmEpk8ATgHSXXZu0h',
+  client_id: process.env.PAYPAL_CONFIGURE_CLIENT_ID,
+  client_secret: process.env.PAYPAL_CONFIGURE_CLIENT_SECRET,
 })
 
 const Student = require('../models/student')
@@ -840,9 +838,9 @@ exports.postEventPaymentPaypal = (req, res, next) => {
     },
     redirect_urls: {
       return_url:
-        'http://localhost:3000/student/events/details/pay/paypal/verify?eventId=' +
+        `${process.env.HOST_NAME}/student/events/details/pay/paypal/verify?eventId=` +
         eventId,
-      cancel_url: 'http://localhost:3000/student/events',
+      cancel_url: `${process.env.HOST_NAME}/student/events`,
     },
     transactions: [
       {
@@ -975,7 +973,7 @@ exports.postEventPaymentPaytm = (req, res, next) => {
         params['CUST_ID'] = paymentDetails.customerId
         params['TXN_AMOUNT'] = paymentDetails.amount
         params['CALLBACK_URL'] =
-          'http://localhost:3000/studentPaytmCallback?eventId=' +
+          `${process.env.HOST_NAME}/studentPaytmCallback?eventId=` +
           eventId +
           '&studentId=' +
           student._id
@@ -1036,7 +1034,7 @@ exports.postEventPaymentPaytmVerify = (req, res, next) => {
 
       var isVerifySignature = PaytmChucksum.verifySignature(
         req.body,
-        'kZ0isefnXLWiUmuf',
+        process.env.PAYTM_CONFIG_KEY,
         paytmChecksum
       )
       if (isVerifySignature) {
@@ -1273,31 +1271,33 @@ exports.postChatAdd = (req, res, next) => {
 }
 
 exports.getVideoChat = (req, res, next) => {
-  Student.findOne({ _id: req.session.student._id }, function (err, student) {
-    Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
-      const announcement = tutor.announcements.reverse()
-      var tutorAssignmentsNotes = tutor.assignments
-        .concat(tutor.notes)
-        .flat()
-        .sort(function (a, b) {
-          return new Date(a.date) - new Date(b.date)
+  if (!req.session.isStudentLoggedIn) {
+    res.redirect('/')
+  }
+    Student.findOne({ _id: req.session.student._id }, function (err, student) {
+      Tutor.findOne({ _id: student.tutorId }, function (err, tutor) {
+        const announcement = tutor.announcements.reverse()
+        var tutorAssignmentsNotes = tutor.assignments
+          .concat(tutor.notes)
+          .flat()
+          .sort(function (a, b) {
+            return new Date(a.date) - new Date(b.date)
+          })
+          .reverse()
+
+        res.render('tutor/video-chat', {
+          pageTitle: 'Dashboard',
+          path: '/student',
+          sPath: '/student/chat',
+          name: student.name,
+          editing: false,
+          isAuthenticated: req.session.isStudentLoggedIn,
+          tutorAssignmentsNotes: tutorAssignmentsNotes,
         })
-        .reverse()
 
-
-      res.render('student/video-chat', {
-        pageTitle: 'Dashboard',
-        path: '/student',
-        sPath: '/student/chat',
-        name: student.name,
-        editing: false,
-        isAuthenticated: req.session.isStudentLoggedIn,
-        tutorAssignmentsNotes: tutorAssignmentsNotes,
+        // io.getIO().emit('NewClient')
       })
-
-      // io.getIO().emit('NewClient')
     })
-  })
 }
 
 
@@ -1432,11 +1432,11 @@ exports.postSendOtp = (request, response, next) => {
       }
       var req = unirest('POST', 'https://d7networks.com/api/verifier/send')
         .headers({
-          Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
+          Authorization: `Token ${process.env.D7NETWORKS_TOKEN}`,
         })
         .field('mobile', '+91' + mobile)
         .field('sender_id', 'SMSINFO')
-        .field('message', 'Your otp code for Class@Home {code}')
+        .field('message', 'Your otp code for Class@Home is {code}')
         .field('expiry', '900')
         .followRedirect(false)
         .end(function (res) {
@@ -1472,7 +1472,7 @@ exports.postOtpVerify = (request, response, next) => {
   if (request.session.studentOtpId) {
     var req = unirest('POST', 'https://d7networks.com/api/verifier/verify')
       .headers({
-        Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
+        Authorization: `Token ${process.env.D7NETWORKS_TOKEN}`,
       })
       .field('otp_id', request.session.studentOtpId)
       .field('otp_code', getOtp)

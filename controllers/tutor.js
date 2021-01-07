@@ -21,18 +21,16 @@ var PaytmChucksum = require('../paytm/chucksumOfficial')
 
 
 var instance = new Razorpay({
-  key_id: 'rzp_test_uHg1pC3lqMlNyl',
-  key_secret: 'zq69JL3eH1zppEZd35u3qAkQ',
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 })
 
 const paypal = require('paypal-rest-sdk')
 
 paypal.configure({
   mode: 'sandbox', //sandbox or live
-  client_id:
-    'AUNJrY7eut6dU9fH9rWIULK0jpr5GvwABZGAHcuTgk3qNAkVaK281WHlP7x3yWAj5vrJPlCwEeZmOUt8',
-  client_secret:
-    'EF7pkgkUFXXiAgQjZ4Q1hP9RYu-Wl0r6m46Ms5thSoN-ybZtMlU9bw-k65qr7YRFmEpk8ATgHSXXZu0h',
+  client_id: process.env.PAYPAL_CONFIGURE_CLIENT_ID,
+  client_secret: process.env.PAYPAL_CONFIGURE_CLIENT_SECRET,
 })
 
 const Tutor = require('../models/tutor')
@@ -1532,7 +1530,7 @@ exports.postEventPaymentRazorVerify = (req, res, next) => {
 
       const eventSingle = tutor.events.find(({ _id }) => _id == eventId)
       const crypto = require('crypto')
-      var secret = 'zq69JL3eH1zppEZd35u3qAkQ'
+      var secret = process.env.RAZORPAY_KEY_SECRET
       const hash = crypto
         .createHmac('sha256', secret)
         .update(razorpay_order_id + '|' + razorpay_payment_id)
@@ -1572,9 +1570,9 @@ exports.postEventPaymentPaypal = (req, res, next) => {
     },
     redirect_urls: {
       return_url:
-        'http://localhost:3000/tutor/events/details/pay/paypal/verify?eventId=' +
+        `${process.env.HOST_NAME}/tutor/events/details/pay/paypal/verify?eventId=` +
         eventId,
-      cancel_url: 'http://localhost:3000/tutor/events',
+      cancel_url: `${process.env.HOST_NAME}/tutor/events`,
     },
     transactions: [
       {
@@ -1707,7 +1705,7 @@ exports.postEventPaymentPaytm = (req, res, next) => {
         params['CUST_ID'] = paymentDetails.customerId
         params['TXN_AMOUNT'] = paymentDetails.amount
         params['CALLBACK_URL'] =
-          'http://localhost:3000/tutorPaytmCallback?eventId=' +
+          `${process.env.HOST_NAME}/tutorPaytmCallback?eventId=` +
           eventId +
           '&tutorId=' +
           tutor._id
@@ -1767,7 +1765,7 @@ exports.postEventPaymentPaytmVerify = (req, res, next) => {
 
   var isVerifySignature = PaytmChucksum.verifySignature(
     req.body,
-    'kZ0isefnXLWiUmuf',
+    process.env.PAYTM_CONFIG_KEY,
     paytmChecksum
   )
   if (isVerifySignature) {
@@ -2083,6 +2081,7 @@ exports.postChatAdd = (req, res, next) => {
 }
 
 exports.getVideoChat = (req,res,next) => {
+  console.log('getVideoChat')
   var videoId  = req.params.videoId;
   // console.log(videoId)
 
@@ -2102,8 +2101,8 @@ exports.getVideoChat = (req,res,next) => {
 
       const sId = req.query.sId
       console.log(sId)
-      const message1 = 'Tutor is inviting you to join the video chat \n Join via - '
-      const message2 = 'http://localhost:3000/chat/video/' + videoId
+      const message1 = 'Tutor is inviting you to join the video chat.'
+      const message2 = `${process.env.HOST_NAME}/student/chat/video/` + videoId
       const date = new Date().toLocaleDateString(undefined, {
         day: '2-digit',
         month: '2-digit',
@@ -2130,6 +2129,10 @@ exports.getVideoChat = (req,res,next) => {
       tutor.chat.push(chat1)
       tutor.chat.push(chat2)
       var inviteVideo = await tutor.save()
+
+      // io.getIO().emit('chat', {
+      //   action: 'chat-add',
+      // })
       
       res.render('tutor/video-chat', {
         pageTitle: 'Dashboard',
@@ -2140,9 +2143,8 @@ exports.getVideoChat = (req,res,next) => {
         isAuthenticated: req.session.isTutorLoggedIn,
         notifyAssignments: studentAssignments,
       })
-      io.getIO().emit('chat', {
-        action: 'chat-add',
-      })
+      
+      
     })
   })
 }
@@ -2184,7 +2186,7 @@ exports.postLogin = (req, res, next) => {
     .then((tutor) => {
       if (!tutor) {
         req.flash('error','Invalid Email or Password')
-        return res.redirect('/tutor/login')
+        res.redirect('/tutor/login')
       }
       bcrypt
         .compare(password, tutor.password)
@@ -2278,7 +2280,7 @@ exports.postSendOtp = (request, response, next) => {
       }
       var req = unirest('POST', 'https://d7networks.com/api/verifier/send')
         .headers({
-          Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
+          Authorization: `Token ${process.env.D7NETWORKS_TOKEN}`,
         })
         .field('mobile', '+91' + mobile)
         .field('sender_id', 'SMSINFO')
@@ -2291,13 +2293,11 @@ exports.postSendOtp = (request, response, next) => {
           }
           var otpDetails = res.raw_body
           var b = JSON.parse(otpDetails)
-            var smsId = b.otp_id
-            if (smsId) {
-              request.session.tutorOtpPhone = mobile;
-              request.session.tutorOtpId = smsId;
-            }
-
-      
+          var smsId = b.otp_id
+          if (smsId) {
+            request.session.tutorOtpPhone = mobile
+            request.session.tutorOtpId = smsId
+          }
 
           response.render('tutor/loginviaotp', {
             path: '/login',
@@ -2320,7 +2320,7 @@ exports.postOtpVerify = (request, response, next) => {
   if (request.session.tutorOtpId){
     var req = unirest('POST', 'https://d7networks.com/api/verifier/verify')
       .headers({
-        Authorization: 'Token b200b653dc6824cd602fca91ea401ed29160befc',
+        Authorization: `Token ${process.env.D7NETWORKS_TOKEN}`,
       })
       .field('otp_id', request.session.tutorOtpId)
       .field('otp_code', getOtp)

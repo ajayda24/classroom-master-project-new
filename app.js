@@ -7,23 +7,23 @@ const mongoose = require('mongoose')
 const session = require('express-session')
 const MongoDBStore = require('connect-mongodb-session')(session)
 const flash = require('connect-flash')
-
+require('dotenv').config()
 
 const errorController = require('./controllers/error')
 const indexController = require('./controllers/index')
 const Tutor = require('./models/tutor')
 const Student = require('./models/student')
 
-const MONGODB_URI = 'mongodb+srv://ajayda24:yaja110125@cluster0.l53kc.mongodb.net/classroomDB'
-// const MONGODB_URI = 'mongodb://localhost:27017/node-master-classroom'
+
+// const MONGODB_URI = `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.l53kc.mongodb.net/${process.env.MONGO_DATABASE}classroomDB`
+
+const MONGODB_URI = process.env.DATABASE_URL_LOCAL
 
 const app = express()
 const store = new MongoDBStore({
   uri: MONGODB_URI,
   collection: 'sessions',
 })
-
-require('dotenv').config()
 
 app.set('view engine', 'ejs')
 app.set('views', 'views')
@@ -40,22 +40,7 @@ app.use(
   })
 )
 
-app.use(flash());
-
-// const fileStorage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     tutorId = req.session.tutor._id.toString()
-//     cb(null, 'tutorFiles/'+tutorId)
-//   },
-//   filename: (req, file, cb) => {
-//     cb(
-//       null,
-//         new Date().getTime() +
-//         '-' +
-//         file.originalname
-//     )
-//   },
-// })
+app.use(flash())
 
 app.use(bodyParser.urlencoded({ extended: false }))
 // app.use(multer({ storage: fileStorage }).single('files'))
@@ -66,7 +51,6 @@ app.use('/studentFiles', express.static(path.join(__dirname, 'studentFiles')))
 
 const studentController = require('./controllers/student')
 const tutorController = require('./controllers/tutor')
-
 
 app.use((req, res, next) => {
   if (!req.session.tutor) {
@@ -101,10 +85,17 @@ app.use((req, res, next) => {
 
 app.use('/studentPaytmCallback', studentController.postEventPaymentPaytmVerify)
 app.use('/tutorPaytmCallback', tutorController.postEventPaymentPaytmVerify)
-  
 
-app.get('/chat/video', studentController.getVideoChat)
+// app.get('/chat/video/:videoId', tutorController.getVideoChat)
+// app.get('/chat/video/:videoId', studentController.getVideoChat)
 
+// app.get('/chat/video', function (req, res, next) {
+//   if(req.session.isStudentLoggedIn){
+//     res.redirect('/chat/video/:videoId')
+//   } else if (req.session.isTutorLoggedIn){
+
+//   }
+// })
 
 app.use('/tutor', tutorRoutes)
 app.use('/student', studentRoutes)
@@ -114,19 +105,15 @@ app.get('/500', errorController.get500)
 
 app.use(errorController.get404)
 
-
-
-// app.use((error, req, res, next) => {
-//   // res.status(error.httpStatusCode).render(...);
-//   // res.redirect('/500');
-//   res.status(500).render('500', {
-//     pageTitle: 'Error!',
-//     path: '/500',
-//     isAuthenticated: req.session.isLoggedIn,
-//   })
-// })
-
-
+app.use((error, req, res, next) => {
+  // res.status(error.httpStatusCode).render(...);
+  // res.redirect('/500');
+  res.status(500).render('500', {
+    pageTitle: 'Error!',
+    path: '/500',
+    isAuthenticated: req.session.isLoggedIn,
+  })
+})
 
 let port = process.env.PORT
 if (port == null || port == '') {
@@ -140,26 +127,28 @@ mongoose
     useFindAndModify: false,
   })
   .then((result) => {
-    const server = app.listen(port, function(){
-      console.log('Server started at port 3000');
+    const server = app.listen(port, function () {
+      console.log('Server started at port 3000')
     })
     const io = require('./socket').init(server)
     let clients = 0
 
     io.on('connection', (socket) => {
-      console.log('Client Connected');
+      console.log('Client Connected')
 
-      // socket.on('NewClient', function () {
-      //   if (clients < 2) {
-      //     if (clients == 1) {
-      //       this.emit('CreatePeer')
-      //     }
-      //   } else this.emit('SessionActive')
-      //   clients++
-      // })
-      // socket.on('Offer', SendOffer)
-      // socket.on('Answer', SendAnswer)
-      // socket.on('disconnect', Disconnect)
+      socket.on('NewClient', function () {
+        if (clients < 2) {
+          if (clients == 1) {
+            this.emit('CreatePeer')
+          }
+        } else {
+          this.emit('SessionActive')
+        }
+        clients++
+      })
+      socket.on('Offer', SendOffer)
+      socket.on('Answer', SendAnswer)
+      socket.on('disconnect', Disconnect)
     })
 
     function Disconnect() {

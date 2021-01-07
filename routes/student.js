@@ -104,14 +104,14 @@ router.get('/notes/details/:notesId',studentAuth,studentController.getNotesDetai
 // /student/profile => GET
 router.get('/profile',studentAuth, studentController.getProfile);
 
-// /tutor/chat => GET
+// /student/chat => GET
 router.get('/chat', studentAuth, studentController.getChat)
 
-// /tutor/chat/add => POST
+// /student/chat/add => POST
 router.post('/chat/add', studentAuth, studentController.postChatAdd)
 
-// /tutor/chat/video => GET
-router.get('/chat/video', studentAuth, studentController.getVideoChat)
+// /student/chat/video => GET
+router.get('/chat/video/:videoId', studentAuth, studentController.getVideoChat)
 
 
 

@@ -6,8 +6,8 @@
         <ul class="main-header__item-list">
             <% if (isAuthenticated) { %>
                 <script>
-                    // var openSocket = io('http://localhost:3000');
-                    var openSocket = io('https://master-classroom-management.herokuapp.com');
+                    var openSocket = io();
+                    // var openSocket = io('https://master-classroom-management.herokuapp.com');
                 </script>
                 <li class="main-header__item">
                     <% if(path == '/tutor') { %>

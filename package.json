@@ -33,6 +33,7 @@
     "paypal-rest-sdk": "^1.8.1",
     "paytmchecksum": "^1.5.0",
     "pdfkit": "^0.11.0",
+    "peer": "^0.6.1",
     "progress-stream": "^2.0.0",
     "querystring": "^0.2.0",
     "razorpay": "^2.0.6",

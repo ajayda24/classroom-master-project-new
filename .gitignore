@@ -2,3 +2,4 @@ node_modules
 .git
 studentFiles
 tutorFiles
+.env

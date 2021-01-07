@@ -358,7 +358,7 @@ html, body {
       <div class="chat-box-header">
         <% if(isChat) { %>
           <%= student.name %>
-            <a href="/chat/video/<%=videoId%>?sId=<%= student._id %>" class="ml-4"><i class="fas fa-video"></i> </a> 
+            <a href="/tutor/chat/video/<%=videoId%>?sId=<%= student._id %>" class="ml-4"><i class="fas fa-video"></i> </a> 
           
         <% } else { %>
           Chat Box
@@ -375,7 +375,7 @@ html, body {
               <% if(!chat.voiceUrl) { %>
                 <% if(chat.videoId){ %>
                   <div id="cm-msg-" class="chat-msg self">      
-                    <div class="cm-msg-text"><a href='<%= chat.message %>'><%= chat.message %></a></div>     
+                    <div class="cm-msg-text">Started Video Call</div>     
                   </div>
                 <% } else { %>
                   <div id="cm-msg-" class="chat-msg self">      
